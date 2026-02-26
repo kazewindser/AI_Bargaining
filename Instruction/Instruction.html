@@ -1,0 +1,57 @@
+{{ block title }}
+            <p><center><strong>説明</strong></center></p>
+{{ endblock }}
+{{ block content }}
+
+    <div>
+        これから行う実験の説明をよく読んでください。<br>
+        <b><span class="text-danger">スライド左下</span></b>にあるボタンを押すと、
+        スライドを前後に進めることができます。      
+    </div>
+    <p> </p>
+    {{ if Treatment == 1 }}
+        <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSrtQDsjAnpMxz7EQt8Dlh_fkEtSk8lBDRz_VqpNhEkboJQ4ItpTswFtnCFYdnVxwlZNHpyC8SRqPpu/pubembed?start=true&loop=true&delayms=30000"
+                frameborder="0"
+                width="100%"
+                height="600"
+                allowfullscreen="true"
+                mozallowfullscreen="true"
+                webkitallowfullscreen="true">
+        </iframe>
+    {{ elif Treatment == 2 }}
+        <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRuAHRC9ZEV9hFsR04JdgvchvGE36SR2nDkDVL3rGTOvs18MWS8m_i-MfyWiNh-1VQhPQu_uMqu_GJl/pubembed?start=false&loop=false&delayms=30000"
+                frameborder="0"
+                width="100%"
+                height="600"
+                allowfullscreen="true"
+                mozallowfullscreen="true"
+                webkitallowfullscreen="true">
+        </iframe>
+    {{ else }}
+        <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRoI1T0X3_vYleG95vprs4zV4dv7poT46dDN4iYUSn3vKIjiLp5xFB_c0iYJqVxvWnH4wYvDV7qBHub/pubembed?start=false&loop=false&delayms=30000"
+            frameborder="0"
+            width="100%"
+            height="600"
+            allowfullscreen="true"
+            mozallowfullscreen="true"
+            webkitallowfullscreen="true">
+        </iframe>
+    {{ endif }}
+
+
+    
+    <div id="nextbtn" class="justify-content-end mt-1" style="display: none;">
+        <button class="btn-primary btn">次へ</button>
+    </div>
+
+    <script>
+        // 秒単位で指定
+        delaytime = 2;
+        window.setTimeout(show_btn, delaytime*30000);
+        function show_btn(){
+            ele = document.getElementById("nextbtn");
+            ele.style.display = "block";
+            ele.classList.add("d-flex");
+        }
+    </script>
+{{ endblock }}

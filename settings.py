@@ -1,11 +1,30 @@
 from os import environ
 
 SESSION_CONFIGS = [
-    # dict(
-    #     name='public_goods',
-    #     app_sequence=['public_goods'],
-    #     num_demo_participants=3,
-    # ),
+    dict(
+        name='Test',
+        display_name='Test',
+        app_sequence=['Instruction'],
+        num_demo_participants=1,
+    ),
+    dict(
+        name='HumanT1',
+        display_name='HumanT1',
+        app_sequence=['Instruction', 'Quiz', 'Practise', 'Human', 'Questionnaire', 'Payoff'],
+        num_demo_participants=2,
+    ),
+    dict(
+        name='AIT2',
+        display_name='AIT2',
+        app_sequence=['Instruction', 'Quiz', 'Practise', 'AI', 'Questionnaire', 'Payoff'],
+        num_demo_participants=2,
+    ),
+    dict(
+        name='AIT3',
+        display_name='AIT3',
+        app_sequence=['Instruction', 'Quiz', 'Practise', 'AI', 'Questionnaire', 'Payoff'],
+        num_demo_participants=2,
+    ),
 ]
 
 # if you set a property in SESSION_CONFIG_DEFAULTS, it will be inherited by all configs
@@ -22,7 +41,9 @@ SESSION_FIELDS = []
 
 # ISO-639 code
 # for example: de, fr, ja, ko, zh-hans
-LANGUAGE_CODE = 'en'
+LANGUAGE_CODE = 'ja'
+
+Treatment = 1   # 1: Human, 2: AI_NObeneficial 3: AI_Beneficial
 
 # e.g. EUR, GBP, CNY, JPY
 REAL_WORLD_CURRENCY_CODE = 'USD'

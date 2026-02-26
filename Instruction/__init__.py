@@ -1,4 +1,5 @@
 from otree.api import *
+from settings import Treatment
 
 
 doc = """
@@ -7,10 +8,9 @@ Your app description
 
 
 class C(BaseConstants):
-    NAME_IN_URL = 'Instruction'
+    NAME_IN_URL = 'instruction'
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 1
-
 
 class Subsession(BaseSubsession):
     pass
@@ -25,16 +25,16 @@ class Player(BasePlayer):
 
 
 # PAGES
-class MyPage(Page):
+class Waitplease(Page):
     pass
 
+class Instruction(Page):
+    @staticmethod
+    def vars_for_template(player: Player):
+        return dict(
+            Treatment = Treatment
+    )
 
-class ResultsWaitPage(WaitPage):
-    pass
 
 
-class Results(Page):
-    pass
-
-
-page_sequence = [MyPage, ResultsWaitPage, Results]
+page_sequence = [Waitplease,Instruction]
