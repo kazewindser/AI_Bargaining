@@ -1,0 +1,23 @@
+{{ block title }}
+    <p><center><strong>アンケート</strong></center></p>
+{{ endblock }}
+
+{{ block content }}
+
+{{ block styles }}
+    <style>
+        .slider {
+            width: 300px; /* 将滑块的长度设置为300像素 */
+        }
+    </style>
+{{ endblock }}
+
+
+    {{ formfields}}
+
+<br><br>
+<button id="nextButton" class="otree-btn-next btn btn-primary" disabled>次へ</button>
+{{ endblock }}
+
+
+

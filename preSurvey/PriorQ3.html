@@ -1,0 +1,80 @@
+{{ block title }}
+    <p><center><strong>アンケート</strong></center></p>
+{{ endblock }}
+
+{{ block content }}
+
+{{ block styles }}
+    <style>
+        .slider {
+            width: 300px; /* 将滑块的长度设置为300像素 */
+        }
+    </style>
+{{ endblock }}
+
+
+    {{ formfield "AIorHUMAN"}}
+
+<!-- --------------------------------------------------------------------------------------------------------------------------------- -->
+<HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=6>
+
+<label class="col-form-label" for="id_predict_accuracy">今日の実験での「ニュースでのAIが生成した部分の割合を推測する」タスクにおいて、<b>あなた</b>の22ラウンドの<b>1回目の推測の平均精度（％）</b>を予測してください：</label><label for="id_Human_accuracy"><span id="rangeValue6" style="font-weight:bold; color: blue;" >?</span>% </label>
+<br>
+
+<input type="range" class="slider" inputmode="numeric" id="id_predict_accu1" max="100" min="0" name="predict_accu1" value="-1" oninput="document.getElementById('rangeValue6').innerText = this.value; checkSliders();">
+<br><br>
+
+<label class="col-form-label" for="id_predict_accuracy2">今日の実験での「ニュースでのAIが生成した部分の割合を推測する」タスクにおいて、<b>あなた</b>の22ラウンドの<b>２回目の推測の平均精度（％）</b>を予測してください： </label><label for="id_Human_accuracy2"> <span id="rangeValue7" style="font-weight: bold; color: blue;" >?</span>%  </label><br>
+<input type="range" class="slider" inputmode="numeric" id="id_predict_accu2" max="100" min="0" name="predict_accu2" value="-1" oninput="document.getElementById('rangeValue7').innerText = this.value; checkSliders();"> 
+
+<br><br><HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=6>
+<!-- --------------------------------------------------------------------------------------------------------------------------------- -->
+<label class="col-form-label" for="id_Human_accuracy"><b>今日の実験参加者</b>の22ラウンドの<b>1回目の推測の平均精度（％）の平均</b>を予測してください： </label><label for="id_Human_accuracy"> <span id="rangeValue2" style="font-weight: bold; color: blue;" >?</span>%  </label><br>
+<input type="range" class="slider" inputmode="numeric" id="id_Human_accuracy" max="100" min="0" name="Human_accuracy" value="-1" oninput="document.getElementById('rangeValue2').innerText = this.value; checkSliders();">
+<br><br>
+
+<label class="col-form-label" for="id_Human_accuracy2"><b>今日の実験参加者</b>の22ラウンドの<b>２回目の推測の平均精度（％）の平均</b>を予測してください： </label><label for="id_Human_accuracy2"> <span id="rangeValue3" style="font-weight: bold; color: blue;" >?</span>%  </label><br>
+<input type="range" class="slider" inputmode="numeric" id="id_Human_accuracy2" max="100" min="0" name="Human_accuracy2" value="-1" oninput="document.getElementById('rangeValue3').innerText = this.value; checkSliders();"> 
+
+<br><br>
+
+<label class="col-form-label" for="id_AveWTP1"><b>今日の実験参加者</b>の<b>WTP1の平均</b>を予測してください： </label><label for="id_AveWTP1"> <span id="rangeValue4" style="font-weight: bold; color: blue;" >?</span>円  </label><br>
+<input type="range" class="slider" inputmode="numeric" id="id_AveWTP1" max="500" min="0" name="AveWTP1" value="-1" oninput="document.getElementById('rangeValue4').innerText = this.value; checkSliders();"> 
+
+<br><br>
+
+<label class="col-form-label" for="id_AveWTP2"><b>今日の実験参加者</b>の<b>WTP2の平均</b>を予測してください： </label><label for="id_AveWTP2"> <span id="rangeValue5" style="font-weight: bold; color: blue;" >?</span>円  </label><br>
+<input type="range" class="slider" inputmode="numeric" id="id_AveWTP2" max="500" min="0" name="AveWTP2" value="-1" oninput="document.getElementById('rangeValue5').innerText = this.value; checkSliders();"> 
+
+<br><br><HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=6>
+
+<!-- --------------------------------------------------------------------------------------------------------------------------------- -->
+<label class="col-form-label" for="id_AI_accuracy">今日の実験の22ラウンドのタスクを<b>ChatGPTが行った場合</b>、その<b>1回目の推測の平均精度（％）</b>を予測してください： </label><label for="id_AI_accuracy"> <span id="rangeValue" style="font-weight: bold; color: blue;" >?</span>%  </label><br>
+<input type="range" class="slider" id="id_AI_accuracy" max="100" min="0" name="AI_accuracy" value="-1" oninput="document.getElementById('rangeValue').innerText = this.value; checkSliders();">
+
+<br><br>
+<button id="nextButton" class="otree-btn-next btn btn-primary" disabled>次へ</button>
+{{ endblock }}
+
+
+{{ block scripts }}
+<script>
+function checkSliders() {
+    const rangeValue = document.getElementById('rangeValue').innerText;
+    const rangeValue2 = document.getElementById('rangeValue2').innerText;
+    const rangeValue3 = document.getElementById('rangeValue3').innerText;
+    const rangeValue4 = document.getElementById('rangeValue4').innerText;
+    const rangeValue5 = document.getElementById('rangeValue5').innerText;
+    const rangeValue6 = document.getElementById('rangeValue6').innerText;
+    const rangeValue7 = document.getElementById('rangeValue7').innerText;
+    const nextButton = document.getElementById('nextButton');
+    
+    // Check if either of the span elements is showing "?"
+    if (rangeValue !== "?" && rangeValue2 !== "?" && rangeValue3 !== "?" && rangeValue4 !== "?" && rangeValue5 !== "?" && rangeValue6 !== "?"&& rangeValue7 !== "?") {
+        nextButton.disabled = false;
+    } else {
+        nextButton.disabled = true;
+    }
+}
+</script>
+{{ endblock}}
