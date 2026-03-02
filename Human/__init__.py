@@ -94,9 +94,18 @@ class Bargaining(Page):
     def live_method(player, data):
         response = {}
         Pother = player.get_others_in_group()[0]
-        response[Pother.id_in_group] = {
-            'otherOffer': data,
-        }
+
+        if data['type'] == 'offer':
+            # P1发送offer给P2
+            response[Pother.id_in_group] = {
+                'otherOffer': data['value'],
+            }
+        elif data['type'] == 'acceptance':
+            # P2发送acceptance给P1
+            response[Pother.id_in_group] = {
+                'otherAcceptance': data['value'],
+            }
+
         return response
 
 class Results(Page):
