@@ -28,11 +28,19 @@ def creating_session(subsession):
     subsession.group_randomly()
 
 class Group(BaseGroup):
-    pass
+    game_finished = models.BooleanField()
+    group_stage = models.IntegerField(min=1,max=4)
 
 
 class Player(BasePlayer):
     ReachStage = models.IntegerField(initial=1, min=1, max=4)
+
+    offer_points = models.IntegerField(
+        min=0,
+        max=100,
+        blank=True,
+        label="応答者に提案する点数（0-100）"
+    )
 
     # Serve As P1
     Stage1_P1propose_toP2 = models.IntegerField(initial=-1,min=0,max=100)
@@ -49,30 +57,42 @@ class Player(BasePlayer):
     Success = models.BooleanField(initial=False)
     Discounted_points = models.FloatField(initial=0,min=0,max=100)
 
+    accepted_offer = models.BooleanField(
+        choices=[[True, '受け入れる / Accept'], [False, '拒否する / Reject']],
+        widget=widgets.RadioSelect,
+        blank=True,
+        label="あなたの選択"
+    )
+
+
 class BargainingLog(ExtraModel):
     player = models.Link(Player)
     group = models.Link(Group)
-    round_number = models.IntegerField()
     stage = models.IntegerField()
-    role = models.StringField()   # 'P1' or 'P2'
-    action_type = models.StringField()  # 'propose' or 'accept'
     offer = models.IntegerField(null=True)
     accepted = models.BooleanField(null=True)
 
 
+
 # PAGES
 class Bargaining(Page):
-
-
+    form_model = 'player'
+    form_fields = ['offer_points','accepted_offer']
 
     @staticmethod
     def vars_for_template(player):
         discount_rate =  player.discount_rate
         ReachStage = player.ReachStage
+        other_role= player.get_others_in_group()[0]
         return dict(
             discount_rate = discount_rate,
-            ReachStage = ReachStage
+            ReachStage = ReachStage,
+            other_role = other_role
         )
+
+    @staticmethod
+    def live_method(player, data):
+        print('received a bid from', player.id_in_group, ':', data)
 
 class Results(Page):
     pass

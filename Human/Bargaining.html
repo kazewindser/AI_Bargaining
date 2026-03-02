@@ -7,8 +7,55 @@
 
 <p>あなたの役割：<b>{{ player.role }}</b></p>
 
+<p>この段階でのあなたの割引率：<b>{{ discount_rate }}</b></p>
 
-    {{ formfields }}
-    {{ next_button }}
+{{ if player.role == 'P1'}}
+    <p>100ポイント中、<b>P2</b>に手渡すポイントを入力してください。：</p>
+{{ else }}
+    <p>100ポイント中、<b>P1</b>に手渡すポイントを入力してください。：</p>
+{{ end if }}
+
+
+    <div class="mb-3 _formfield">
+            <label class="col-form-label" for="id_offer_points">応答者に提案する点数（0-100）</label>
+            <div class="controls">
+                <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" name="offer_points" value="">
+
+            </div>
+    </div>
+
+<div class="mb-3 _formfield">
+        <label class="col-form-label" for="id_accepted_offer">あなたの選択</label>
+        <div class="controls">
+            <div id="id_accepted_offer"><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True"> <label for="id_accepted_offer-0">受け入れる / Accept</label></div><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False"> <label for="id_accepted_offer-1">拒否する / Reject</label></div></div>
+        </div>
+</div>
+
+
+<!-- 🔴 实时预览区域 -->
+<div id="preview" style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 5px; display: none;">
+    <h4 style="margin-top: 0; color: #28a745;">📊 提案結果のプレビュー / Offer Preview</h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 2px solid #dee2e6;">
+            <th style="padding: 8px; text-align: left;">役割 / Role</th>
+            <th style="padding: 8px; text-align: right;">提案したポイント / Original Points</th>
+            <th style="padding: 8px; text-align: right;">割引率 / Discount Rate</th>
+            <th style="padding: 8px; text-align: right;">割引後のポイント / Discounted Points</th>
+        </tr>
+        <tr style="background-color: #e7f3ff;">
+            <td style="padding: 8px;"><b>あなた ({{ player.role }})</b></td>
+            <td style="padding: 8px; text-align: right;"><span id="you-original">-</span></td>
+            <td style="padding: 8px; text-align: right;"><span id="you-discount">-</span></td>
+            <td style="padding: 8px; text-align: right;"><strong><span id="you-discounted">-</span></strong></td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><b>{{ other_role }}</b></td>
+            <td style="padding: 8px; text-align: right;"><span id="other-original">-</span></td>
+            <td style="padding: 8px; text-align: right;"><span id="other-discount">-</span></td>
+            <td style="padding: 8px; text-align: right;"><strong><span id="other-discounted">-</span></strong></td>
+        </tr>
+    </table>
+</div>
+
 
 {{ endblock }}
