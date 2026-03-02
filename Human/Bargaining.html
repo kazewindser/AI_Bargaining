@@ -1,0 +1,14 @@
+{{ block title }}
+    Round {{ player.round_number }}
+<br>
+<center>ステージ {{ReachStage}}</center>
+{{ endblock }}
+{{ block content }}
+
+<p>あなたの役割：<b>{{ player.role }}</b></p>
+
+
+    {{ formfields }}
+    {{ next_button }}
+
+{{ endblock }}

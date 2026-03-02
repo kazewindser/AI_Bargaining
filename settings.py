@@ -2,10 +2,10 @@ from os import environ
 
 SESSION_CONFIGS = [
     dict(
-        name='Questionnaire',
+        name='Test',
         display_name='Test',
-        app_sequence=['Questionnaire'],
-        num_demo_participants=1,
+        app_sequence=['Human'],
+        num_demo_participants=2,
     ),
     dict(
         name='HumanT1',
@@ -33,10 +33,10 @@ SESSION_CONFIGS = [
 # e.g. self.session.config['participation_fee']
 
 SESSION_CONFIG_DEFAULTS = dict(
-    real_world_currency_per_point=1.00, participation_fee=0.00, doc=""
+    real_world_currency_per_point=40, participation_fee=500, doc=""
 )
 
-PARTICIPANT_FIELDS = []
+PARTICIPANT_FIELDS = ['Discounted_points_Per_Round']
 SESSION_FIELDS = []
 
 # ISO-639 code
