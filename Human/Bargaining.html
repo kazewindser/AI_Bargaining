@@ -12,15 +12,17 @@
 {{ if player.role == 'P1'}}
     <p>100ポイント中、<b>P2</b>に手渡すポイントを入力してください。：</p>
 {{ else }}
+<p><span id="waitingP1"> 相手(P1)からの提案を待ってください...</span> </p>
+<p><span id="offerfromP1text"> 相手(P1)からの提案は...</span> </p> <span id="offerfromP1"></span>
     <p>100ポイント中、<b>P1</b>に手渡すポイントを入力してください。：</p>
-{{ end if }}
+{{ endif }}
 
 
     <div class="mb-3 _formfield">
             <label class="col-form-label" for="id_offer_points">応答者に提案する点数（0-100）</label>
             <div class="controls">
                 <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" name="offer_points" value="">
-
+                <button type="button" onclick="sendValue()">Send</button>
             </div>
     </div>
 
@@ -57,5 +59,26 @@
     </table>
 </div>
 
+
+{{ endblock }}
+
+
+{{ block scripts }}
+<script>
+  let offer_points = document.getElementById('id_offer_points');
+
+  function liveRecv(data) {
+    console.log('received a message!', data);
+    document.getElementById('waitingP1').style.display = 'none';
+    document.getElementById('offerfromP1text').style.display = 'block';
+    document.getElementById('offerfromP1').innerHTML = data['otherOffer'];
+}
+
+  function sendValue() {
+    console.log('sendValue called, offer_points.value:', offer_points.value);
+    liveSend(parseInt(offer_points.value));
+  }
+
+</script>
 
 {{ endblock }}

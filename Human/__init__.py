@@ -92,7 +92,12 @@ class Bargaining(Page):
 
     @staticmethod
     def live_method(player, data):
-        print('received a bid from', player.id_in_group, ':', data)
+        response = {}
+        Pother = player.get_others_in_group()[0]
+        response[Pother.id_in_group] = {
+            'otherOffer': data,
+        }
+        return response
 
 class Results(Page):
     pass
