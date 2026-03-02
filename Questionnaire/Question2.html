@@ -1,0 +1,51 @@
+{{ block title }}
+    <p><center><strong>アンケート</strong></center></p>
+{{ endblock }}
+
+{{ block content }}
+
+<p>今日の実験でのあなたの戦略について教えてください（複数選択可）</p>
+
+
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" value="True" name="strategy_max_self_payoff">
+  <label class="form-check-label">
+    自分の利益を最大化しようとした
+  </label>
+</div>
+
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" value="True" name="strategy_fairness">
+  <label class="form-check-label">
+    相手との公平性を重視した
+  </label>
+</div>
+
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" value="True" name="strategy_avoid_conflict">
+  <label class="form-check-label">
+    対立や衝突を避けようとした
+  </label>
+</div>
+
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" value="True" name="strategy_probe">
+  <label class="form-check-label">
+    相手の最低ライン（底値）を探る
+  </label>
+</div>
+
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" value="True" name="strategy_punish_unfair">
+  <label class="form-check-label">
+    不公平な提案に対して拒否や報復をした
+  </label>
+</div>
+
+{{ formfield "strategy_other_text" }}
+
+
+
+
+<p style="text-align: center;"><button class="otree-btn-next btn btn-primary" id="nextButton">結果を見る</button></p>
+{{ endblock }}

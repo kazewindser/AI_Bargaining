@@ -2,9 +2,9 @@ from os import environ
 
 SESSION_CONFIGS = [
     dict(
-        name='preSurvey',
+        name='Questionnaire',
         display_name='Test',
-        app_sequence=['preSurvey'],
+        app_sequence=['Questionnaire'],
         num_demo_participants=1,
     ),
     dict(
@@ -43,7 +43,7 @@ SESSION_FIELDS = []
 # for example: de, fr, ja, ko, zh-hans
 LANGUAGE_CODE = 'ja'
 
-Treatment = 1   # 1: Human, 2: AI_NObeneficial 3: AI_Beneficial
+Treatment = 3  # 1: Human, 2: AI_NObeneficial 3: AI_Beneficial
 
 # e.g. EUR, GBP, CNY, JPY
 REAL_WORLD_CURRENCY_CODE = 'USD'
