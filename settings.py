@@ -4,8 +4,8 @@ SESSION_CONFIGS = [
     dict(
         name='Test',
         display_name='Test',
-        app_sequence=['Human'],
-        num_demo_participants=2,
+        app_sequence=['AI'],
+        num_demo_participants=1,
     ),
     dict(
         name='HumanT1',

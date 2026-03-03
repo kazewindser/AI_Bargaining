@@ -1,40 +1,256 @@
 from otree.api import *
+import random
+
+
+#### AI setting #################
+from openai import OpenAI
+from otree.models import player
+from pydantic import BaseModel, Field
+import os
+
+from .Prompts import SYSTEM_PROMPT,user_prompt_P1_stage1_initial
+client = OpenAI(api_key=os.environ.get('AI_Bargaining_KEY'))
+
+
+MODEL = "gpt-5.2"
+TEMP = 1
+
+class P1_stage1_initial(BaseModel):
+    Offer_to_P2_stage1: int = Field(ge=0, le=100)
+
+class P1_stage2_stage3(BaseModel):
+    Whether_to_accept_P2_offer_stage2: bool
+    Offer_to_P2_if_rejected_proceed_to_stage3: int
+
+class P2_stage1_stage2(BaseModel):
+    Whether_to_accept_P1_offer_stage1: bool
+    Offer_to_P1_if_rejected_proceed_to_stage2: int
+
+class P2_stage3_end(BaseModel):
+    Whether_to_accept_P1_offer_stage3: bool
+
+def ElicitAIResp_P1_stage1_initial():
+    response = client.responses.parse(
+        model=MODEL,
+        input=[
+            {"role": "system",
+             "content": SYSTEM_PROMPT},
+            {"role": "user",
+             "content": user_prompt_P1_stage1_initial}
+        ],
+        temperature=TEMP,
+        text_format=P1_stage1_initial,
+    )
+    response_content = response.output_parsed
+    prediction_dict = response_content.model_dump()
+    return int(prediction_dict["Offer_to_P2_stage1"])
+
+def ElicitAIResp_P2_stage1_stage2(player):
+    HumanP1toAIP2stage1 = player.HumanP1toAIP2stage1
+    user_prompt_P2_stage1_stage2 = f"""
+    Follow the game rules defined in the system prompt.
+    -Role: P2
+    -The human player is P1.
+    -Current Stage: 1
+    -P1 has decided to propose {HumanP1toAIP2stage1} points to you.
+
+    -Decision required:
+    1. Decide whether to ACCEPT this offer: Whether_to_accept_P1_offer_stage1: <TRUE/FALSE>
+    2. If you REJECT, propose an offer for Stage 2: Offer_to_P1_if_rejected_proceed_to_stage2: <integer or -1 if accepted>
+    """
+    print(user_prompt_P2_stage1_stage2)
+    response = client.responses.parse(
+        model=MODEL,
+        input=[
+            {"role": "system",
+             "content": SYSTEM_PROMPT},
+            {"role": "user",
+             "content": user_prompt_P2_stage1_stage2}
+        ],
+        temperature=TEMP,
+        text_format=P2_stage1_stage2,
+    )
+    response_content = response.output_parsed
+    prediction_dict = response_content.model_dump()
+    return prediction_dict
+
+
+####################################
 
 
 doc = """
-Your app description
+Bargaining with AI
 """
 
 
 class C(BaseConstants):
-    NAME_IN_URL = 'HumanAI_BNF'
+    NAME_IN_URL = 'AI_BNF'
     PLAYERS_PER_GROUP = None
-    NUM_ROUNDS = 1
+    NUM_ROUNDS = 10
+
+    P1_ROLE = 'P1'
+    P2_ROLE = 'P2'
+
+    # 折扣率设置
+    DISCOUNT_P1 = 0.6  # P1每阶段的折扣率
+    DISCOUNT_P2 = 0.4  # P2每阶段的折扣率
+
 
 
 class Subsession(BaseSubsession):
     pass
 
+def creating_session(subsession):
+    if subsession.round_number == 1:  # 只在第1轮初始化
+        for p in subsession.get_players():
+            p.participant.ROLE = []
+            p.participant.Discounted_points_Per_Round = []
+            p.participant.PairedLabel = []
 
 class Group(BaseGroup):
     pass
 
 
 class Player(BasePlayer):
-    pass
+    CurrentStage = models.IntegerField(initial=1, min=1, max=4)
+
+    offer_points = models.IntegerField(min=0,max=100,blank=True,label="応答者に提案する点数（0-100）")
+    accepted_offer = models.BooleanField(choices=[[True, '受け入れる / Accept'], [False, '拒否する / Reject']],widget=widgets.RadioSelect,
+        blank=True,label="あなたの選択"
+    )
+
+    Role = models.StringField()
+
+    potential_point = models.IntegerField(initial=0,min=0,max=100)
+    discount_rate = models.FloatField(initial=1,min=0,max=1)
+    AIdiscount_rate = models.FloatField(initial=1,min=0,max=1)
+    Discounted_points = models.FloatField(initial=0,min=0,max=100)
+    AIdiscounted_points = models.FloatField(initial=0,min=0,max=100)
+
+    #LOGOFFER (AIP1;HumanP2)
+    AIP1toHumanP2stage1 = models.IntegerField(initial=-2,max=100)
+    HumanP2toAIP1stage2 = models.IntegerField(initial=-2,max=100)
+    AIP1toHumanP2stage3 = models.IntegerField(initial=-2,max=100)
+
+    # LOGOFFER (HumanP1;AIP2)
+    HumanP1toAIP2stage1 = models.IntegerField(initial=-2,max=100)
+    AIP2toHumanP1stage2 = models.IntegerField(initial=-2,max=100)
+    HumanP1toAIP2stage3 = models.IntegerField(initial=-2,max=100)
+
+    game_finished = models.BooleanField(initial=False)
+
+
+class BargainingLog(ExtraModel):
+    player = models.Link(Player)
+    stage = models.IntegerField(initial=1, min=1, max=4)
+    offer_to_AI = models.IntegerField(null=True)
+    offer_from_AI = models.IntegerField(null=True)
+    accepted = models.BooleanField(null=True)
+    Role = models.StringField(null=True)
+
+
+
+def SaveQ(subsession):
+    for p in subsession.get_players():
+        p.participant.ROLE.append(p.Role)
+        p.participant.Discounted_points_Per_Round.append(p.Discounted_points)
+
 
 
 # PAGES
-class MyPage(Page):
-    pass
+class Title(Page):
+    @staticmethod
+    def is_displayed(player):
+        #player.Role = random.choice(['P1', 'P2'])
+        #player.Role = 'P1'
+        player.Role = 'P2'
+        return player.round_number == 1
 
+class AI_Bargaining(Page):
+    form_model = 'player'
+    form_fields = ['offer_points','accepted_offer']
 
-class ResultsWaitPage(WaitPage):
-    pass
+    @staticmethod
+    def vars_for_template(player):
+        discount_rate =  player.discount_rate
+        AI_role = 'P1' if player.Role == 'P2' else 'P2'
+        if player.Role == 'P2':
+            player.AIP1toHumanP2stage1 = ElicitAIResp_P1_stage1_initial()
+        AIP1toHumanP2stage1 = player.AIP1toHumanP2stage1
+        return dict(
+            CurrentStage = player.CurrentStage,
+            discount_rate = discount_rate,
+            AI_role = AI_role,
+            AIP1toHumanP2stage1 = AIP1toHumanP2stage1,
+        )
+
+    @staticmethod
+    def live_method(player, data):
+        response = {}
+
+        if data['type'] == 'offer':
+            if player.Role == 'P1' and player.CurrentStage == 1:
+                player.HumanP1toAIP2stage1 = data['value']
+                player.potential_point = 100-player.HumanP1toAIP2stage1
+                AIP2stage1Resp = ElicitAIResp_P2_stage1_stage2(player)
+                if AIP2stage1Resp['Whether_to_accept_P1_offer_stage1']:
+                    player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
+                    player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                    player.game_finished = True
+                else:
+                    player.potential_point = AIP2stage1Resp['Offer_to_P1_if_rejected_proceed_to_stage2']
+                    print('Offer_to_P1_if_rejected_proceed_to_stage2:', player.potential_point)
+
+                response[player.id_in_group] = {
+                    'game_finished': player.game_finished,
+                    'AIaccept': AIP2stage1Resp['Whether_to_accept_P1_offer_stage1'],
+                    'AIOffer': AIP2stage1Resp['Offer_to_P1_if_rejected_proceed_to_stage2'],
+                    'CurrentStage': player.CurrentStage,
+                }
+
+        elif data['type'] == 'acceptance':
+            # Convert string 'True'/'False' to boolean if needed
+            accepted_value = data['value']
+            if isinstance(accepted_value, str):
+                accepted_value = data['value'] == 'True'
+                if accepted_value:
+                    player.game_finished = True
+                    player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
+                    player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                else:
+                    player.CurrentStage += 1
+                    if player.CurrentStage >= 4:
+                        player.game_finished = True
+                        player.Discounted_points = 0
+                        player.AIdiscounted_points = 0
+                    else:
+                        player.discount_rate *= C.DISCOUNT_P1 if player.role == C.P1_ROLE else C.DISCOUNT_P2
+                        player.AIdiscount_rate *= C.DISCOUNT_P2 if player.role == C.P1_ROLE else C.DISCOUNT_P1
+                    
+                    
+            response[player.id_in_group] = {
+                'game_finished': player.game_finished,
+                'CurrentStage': player.CurrentStage,
+                'discount_rate': player.discount_rate,
+                'AIdiscount_rate': player.AIdiscount_rate,
+            }
+        return response
+
+    @staticmethod
+    def js_vars(player):
+        return dict(
+            payoff=player.payoff,
+        )
 
 
 class Results(Page):
+    timeout_seconds = 10
     pass
 
+class WaitForNext(WaitPage):
+    wait_for_all_groups = True
+    @staticmethod
+    def after_all_players_arrive(subsession):
+        SaveQ(subsession)
 
-page_sequence = [MyPage, ResultsWaitPage, Results]
+page_sequence = [Title,AI_Bargaining,Results,WaitForNext]

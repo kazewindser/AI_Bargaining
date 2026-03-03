@@ -9,7 +9,7 @@ Your app description
 class C(BaseConstants):
     NAME_IN_URL = 'Human'
     PLAYERS_PER_GROUP = 2
-    NUM_ROUNDS = 1
+    NUM_ROUNDS = 10
 
     P1_ROLE = 'P1'
     P2_ROLE = 'P2'
@@ -17,9 +17,6 @@ class C(BaseConstants):
     # 折扣率设置
     DISCOUNT_P1 = 0.6  # P1每阶段的折扣率
     DISCOUNT_P2 = 0.4  # P2每阶段的折扣率
-
-
-
 
 class Subsession(BaseSubsession):
     pass
@@ -49,8 +46,6 @@ class Player(BasePlayer):
     )
 
     potential_point = models.IntegerField(initial=0,min=0,max=100)
-    current_offer_sent = models.IntegerField(initial=0,min=0,max=100)  # 记录自己发送的offer
-    current_offer_received = models.IntegerField(initial=0,min=0,max=100)  # 记录收到的offer
 
     discount_rate = models.FloatField(initial=1,min=0,max=1)
     Discounted_points = models.FloatField(initial=0,min=0,max=100)
@@ -65,30 +60,23 @@ class Player(BasePlayer):
 
 class BargainingLog(ExtraModel):
     player = models.Link(Player)
-    group = models.Link(Group)
     stage = models.IntegerField(initial=1, min=1, max=4)
-    role = models.StringField()  # 记录操作时的角色
     offer_to_other = models.IntegerField(null=True)
     offer_from_other = models.IntegerField(null=True)
     accepted = models.BooleanField(null=True)
+    Role = models.StringField(null=True)
 
 
 def custom_export(players):
-    yield ['participant_code', 'participant_label', 'round_number', 'stage', 'role', 'offer_to_other',
+    yield ['session','participant_code', 'participant_label', 'round_number', 'stage', 'role', 'offer_to_other',
            'offer_from_other', 'accepted']
 
-    for log in BargainingLog.filter():
+    LOGS = BargainingLog.filter()
+    for log in LOGS:
         player = log.player
-        yield [
-            player.participant.code,
-            player.participant.label,
-            player.round_number,
-            log.stage,
-            log.role,
-            log.offer_to_other,
-            log.offer_from_other,
-            log.accepted
-        ]
+        participant = player.participant
+        session = player.session
+        yield [session.code, participant.code, participant.label, player.round_number, log.stage, log.Role, log.offer_to_other, log.offer_from_other, log.accepted]
 
 
 def SaveQ(subsession):
@@ -105,6 +93,12 @@ def SaveQ(subsession):
 
 
 # PAGES
+
+class Title(Page):
+    @staticmethod
+    def is_displayed(player):
+        return player.round_number == 1
+
 class Bargaining(Page):
     form_model = 'player'
     form_fields = ['offer_points','accepted_offer']
@@ -126,7 +120,7 @@ class Bargaining(Page):
         Pother = player.get_others_in_group()[0]
 
         if data['type'] == 'offer':
-            BargainingLog.create(player=player, group=player.group, stage=player.group.group_stage, role=player.role, offer_to_other=data['value'], accepted=None)
+            BargainingLog.create(player=player,stage=player.group.group_stage,Role=player.role,offer_to_other=data['value'], accepted=None)
             player.potential_point = 100-data['value']
             Pother.potential_point = data['value']
             # 发送offer给对方
@@ -143,7 +137,7 @@ class Bargaining(Page):
             accepted_value = data['value']
             if isinstance(accepted_value, str):
                 accepted_value = data['value'] == 'True'
-            BargainingLog.create(player=player, group=player.group, stage=player.group.group_stage, role=player.role, offer_from_other=player.potential_point, accepted=accepted_value)
+            BargainingLog.create(player=player, stage=player.group.group_stage, Role=player.role,offer_from_other=player.potential_point, accepted=accepted_value)
             if accepted_value:
                 player.group.game_finished = True
                 player.Discounted_points = round(player.potential_point * player.discount_rate,2)
@@ -184,6 +178,6 @@ class WaitForNext(WaitPage):
         SaveQ(subsession)
         subsession.group_randomly()
 
-page_sequence = [Bargaining, Results,WaitForNext]
+page_sequence = [Title,Bargaining,Results,WaitForNext]
 
 
