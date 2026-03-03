@@ -1,41 +1,40 @@
 {{ block title }}
     Round {{ player.round_number }}
 <br>
-<center>ステージ {{ReachStage}}</center>
+<center>ステージ <span id="group_stage">{{player.group.group_stage}}</span> </center>
 {{ endblock }}
 {{ block content }}
 
 <p>あなたの役割：<b>{{ player.role }}</b></p>
 
-<p>この段階でのあなたの割引率：<b>{{ discount_rate }}</b></p>
+<p>この段階でのあなたの割引率：<b><span id="discount_rate">{{ discount_rate }}</span></b></p>
 
-{{ if player.role == 'P1'}}
-    <p>100ポイント中、<b>P2</b>に手渡すポイントを入力してください。：</p>
-    <p style="display: none;"><span id="Accept">P2の回応は、接受了</span></p>
-    <p style="display: none;"><span id="Reject">P2の回応は、拒绝了</span></p>
-{{ else }}
-<p><span id="waitingP1"> 相手(P1)からの提案を待ってください...</span> </p>
-<p><span id="offerfromP1text"> 相手(P1)からの提案は...</span> </p> <span id="offerfromP1"></span>
-    <p>100ポイント中、<b>P1</b>に手渡すポイントを入力してください。：</p>
+{{ if player.role == 'P2' }}
+<p><span id="p2firstwaiting">相手(P1)からの提案を待ってください...</span></p>
 {{ endif }}
+<p style="display: none;"><span id="Accept">{{ other_role }}はあなたの提案を受け入れました</span></p>
+<p style="display: none;"><span id="Reject">{{ other_role }}はあなたの提案を拒否しました。{{ other_role }}の提案をお待ちください。</span></p>
+<p><span id="offertext" style="display: none;">相手({{ other_role }})からの提案は</span> <span id="offerfrom"></span></p>
 
 
-    <div class="mb-3 _formfield">
-            <label class="col-form-label" for="id_offer_points">応答者に提案する点数（0-100）</label>
+
+
+    <div class="mb-3 _formfield" id="offer_field" style="display: none;">
+            <label class="col-form-label" for="id_offer_points"> 100ポイント中、{{if player.role == 'P1'}}P2{{else}}P1{{endif}}に手渡すポイントを入力してください。</label>
             <div class="controls">
-                <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" name="offer_points" value="">
-                <button type="button" onclick="sendValue()">Send</button>
+                <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" step="1" name="offer_points" value="" oninput="validateOffer(this)">
+                <button type="button" onclick="sendValue()">提案を出す</button>
             </div>
     </div>
 
 
-<div class="mb-3 _formfield">
-        <label class="col-form-label" for="id_accepted_offer">あなたの選択</label>
-        <div class="controls">
-            <div id="id_accepted_offer"><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True"> <label for="id_accepted_offer-0">受け入れる / Accept</label></div><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False"> <label for="id_accepted_offer-1">拒否する / Reject</label></div></div>
-            <button type="button" onclick="sendAccept_Reject()">Send</button>
-        </div>
-</div>
+    <div class="mb-3 _formfield" id="accept_field" style="display: none;">
+            <label class="col-form-label" for="id_accepted_offer">あなたの選択</label>
+            <div class="controls">
+                <div id="id_accepted_offer"><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True"> <label for="id_accepted_offer-0">受け入れる / Accept</label></div><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False"> <label for="id_accepted_offer-1">拒否する / Reject</label></div></div>
+                <button type="button" onclick="sendAccept_Reject()">Send</button>
+            </div>
+    </div>
 
 
 <!-- 🔴 实时预览区域 -->
@@ -69,46 +68,148 @@
 
 {{ block scripts }}
 <script>
+  let group_stage = document.getElementById('group_stage');
   let offer_points = document.getElementById('id_offer_points');
+  let stageElem = document.getElementById('group_stage');
+  let playerRole = '{{ player.role }}';
+  let offerField = document.getElementById('offer_field');
+  let accept_field = document.getElementById('accept_field');
+
+  let p2firstwaiting = document.getElementById('p2firstwaiting');
+  let offertext = document.getElementById('offertext');
+  let offerfrom = document.getElementById('offerfrom');
+  let acceptMsg = document.getElementById('Accept');
+  let rejectMsg = document.getElementById('Reject');
+
+  // 跟踪当前stage是否已收到offer
+  let receivedOfferInCurrentStage = false;
+
+  let discount_rate = document.getElementById('discount_rate');
+
+
+
+  // 控制offer_field和accept_field的显示逻辑
+  function updateFieldsVisibility() {
+    let currentStage = parseInt(stageElem.innerHTML);
+    let shouldShowOffer = false;
+    let shouldShowAccept = false;
+
+    if (playerRole === 'P1') {
+      // P1在stage 1, 3出价，在stage 2, 4接受/拒绝（需要收到offer后才显示）
+      shouldShowOffer = (currentStage === 1 || currentStage === 3);
+      shouldShowAccept = (currentStage === 2 || currentStage === 4) && receivedOfferInCurrentStage;
+    } else if (playerRole === 'P2') {
+      // P2在stage 2, 4出价，在stage 1, 3接受/拒绝（需要收到offer后才显示）
+      shouldShowOffer = (currentStage === 2 || currentStage === 4);
+      shouldShowAccept = (currentStage === 1 || currentStage === 3) && receivedOfferInCurrentStage;
+    }
+
+    offerField.style.display = shouldShowOffer ? 'block' : 'none';
+    accept_field.style.display = shouldShowAccept ? 'block' : 'none';
+
+    // 重新显示时清空输入值
+    if (shouldShowOffer) {
+      offer_points.value = '';
+      receivedOfferInCurrentStage = false; // 重置标志
+    }
+    if (shouldShowAccept) {
+      document.querySelectorAll('input[name="accepted_offer"]').forEach(radio => radio.checked = false);
+    }
+  }
+
+  // 验证输入值，确保为0-100的整数
+  function validateOffer(input) {
+    let value = input.value;
+    // 移除小数点和非数字字符
+    value = value.replace(/[^\d]/g, '');
+    // 转换为整数
+    let numValue = parseInt(value);
+    // 限制范围
+    if (numValue > 100) {
+      numValue = 100;
+    } else if (numValue < 0 || isNaN(numValue)) {
+      numValue = 0;
+    }
+    input.value = numValue || '';
+  }
+
+  // 页面加载时初始化
+  updateFieldsVisibility();
 
   function liveRecv(data) {
     console.log('received a message!', data);
 
     if (data['otherOffer'] !== undefined) {
-      // P2收到P1的offer
-      document.getElementById('waitingP1').style.display = 'none';
-      document.getElementById('offerfromP1text').style.display = 'block';
-      document.getElementById('offerfromP1').innerHTML = data['otherOffer'];
+      // 收到对方的offer
+      receivedOfferInCurrentStage = true;
+      if (p2firstwaiting) p2firstwaiting.style.display = 'none';
+      rejectMsg.parentElement.style.display = 'none'; // 隐藏Reject消息
+      offertext.style.display = 'inline';
+      offerfrom.innerHTML = data['otherOffer'];
     }
 
     if (data['otherAcceptance'] !== undefined) {
-      // P1收到P2的acceptance
-      console.log('P2的回应:', data['otherAcceptance']);
-      if (data['otherAcceptance'] === 'True') {
-        document.getElementById('Accept').parentElement.style.display = 'block';
-        document.getElementById('Reject').parentElement.style.display = 'none';
-      } else {
-        document.getElementById('Accept').parentElement.style.display = 'none';
-        document.getElementById('Reject').parentElement.style.display = 'block';
+      // 收到对方的acceptance回应
+      console.log('对方的回应:', data['otherAcceptance']);
+      if (data['otherAcceptance'] === true) {
+        // 接受了
+        acceptMsg.parentElement.style.display = 'block';
+        rejectMsg.parentElement.style.display = 'none';
+      } else if (data['otherAcceptance'] === false) {
+        // 拒绝了
+        acceptMsg.parentElement.style.display = 'none';
+        rejectMsg.parentElement.style.display = 'block';
       }
     }
+
+    updateFieldsVisibility();
+
+    if (data['game_finished']) {
+        document.getElementById("form").submit();
+    }
+
+      // 更新stage显示
+    if (data['group_stage'] !== undefined) {
+      stageElem.innerHTML = data['group_stage'];
+    }
+
+    // 更新discout_rate显示
+      discount_rate.innerHTML = data['discount_rate'];
+
   }
 
   function sendValue() {
-    console.log('sendValue called, offer_points.value:', offer_points.value);
+    let value = parseInt(offer_points.value);
+    // 验证输入是否合法（0-100的整数）
+    if (isNaN(value) || value < 0 || value > 100) {
+      alert('0から100の整数を入力してください。');
+      return;
+    }
+    console.log('sendValue called, offer_points.value:', value);
     liveSend({
       type: 'offer',
-      value: parseInt(offer_points.value)
+      value: value
     });
+    offerField.style.display = 'none';
+
   }
 
   function sendAccept_Reject() {
     let selectedRadio = document.querySelector('input[name="accepted_offer"]:checked');
-    console.log('sendAccept_Reject called, selected:', selectedRadio ? selectedRadio.value : 'none');
+    if (!selectedRadio) {
+      alert('選択してください。');
+      return;
+    }
+    console.log('sendAccept_Reject called, selected:', selectedRadio.value);
     liveSend({
       type: 'acceptance',
       value: selectedRadio.value
     });
+    // 提交后立即隐藏accept_field和offer信息
+    accept_field.style.display = 'none';
+    offertext.style.display = 'none';
+    offerfrom.innerHTML = '';
+    receivedOfferInCurrentStage = false;
   }
 
 </script>

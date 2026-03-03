@@ -9,7 +9,7 @@ Your app description
 class C(BaseConstants):
     NAME_IN_URL = 'Human'
     PLAYERS_PER_GROUP = 2
-    NUM_ROUNDS = 10
+    NUM_ROUNDS = 2
 
     P1_ROLE = 'P1'
     P2_ROLE = 'P2'
@@ -28,8 +28,8 @@ def creating_session(subsession):
     subsession.group_randomly()
 
 class Group(BaseGroup):
-    game_finished = models.BooleanField()
-    group_stage = models.IntegerField(min=1,max=4)
+    game_finished = models.BooleanField(initial=False)
+    group_stage = models.IntegerField(min=1,max=4,initial=1)
 
 
 class Player(BasePlayer):
@@ -68,9 +68,20 @@ class Player(BasePlayer):
 class BargainingLog(ExtraModel):
     player = models.Link(Player)
     group = models.Link(Group)
-    stage = models.IntegerField()
+    stage = models.IntegerField(initial=1, min=1, max=4)
     offer = models.IntegerField(null=True)
     accepted = models.BooleanField(null=True)
+
+def custom_export(players):
+    # header row
+    yield ['label', 'round_number','stage','role','offer']
+
+    # 'filter' without any args returns everything
+    LOGS = BargainingLog.filter()
+    for log in LOGS:
+        player = LOGS.player
+        yield [player.label, player.round_number, log.stage, player.role, log.offer,log.accepted]
+
 
 
 
@@ -87,7 +98,7 @@ class Bargaining(Page):
         return dict(
             discount_rate = discount_rate,
             ReachStage = ReachStage,
-            other_role = other_role
+            other_role = other_role.role
         )
 
     @staticmethod
@@ -96,14 +107,39 @@ class Bargaining(Page):
         Pother = player.get_others_in_group()[0]
 
         if data['type'] == 'offer':
+            BargainingLog.create(player=player, stage=player.group.group_stage, offer=data['value'], accepted=None)
             # P1发送offer给P2
             response[Pother.id_in_group] = {
                 'otherOffer': data['value'],
+                'group_stage': player.group.group_stage,
             }
         elif data['type'] == 'acceptance':
-            # P2发送acceptance给P1
+            # Convert string 'True'/'False' to boolean if needed
+            accepted_value = data['value']
+            if isinstance(accepted_value, str):
+                accepted_value = data['value'] == 'True'
+            BargainingLog.create(player=player, stage=player.group.group_stage, offer=None, accepted=accepted_value)
+            if accepted_value:
+                player.group.game_finished = True
+            else:
+                player.group.group_stage += 1
+                if player.group.group_stage == 4:
+                    player.group.game_finished = True
+
+                for p in [player, Pother]:
+                    p.discount_rate *= C.DISCOUNT_P1 if p.role == C.P1_ROLE else C.DISCOUNT_P2
+
             response[Pother.id_in_group] = {
-                'otherAcceptance': data['value'],
+                'otherAcceptance': accepted_value,
+                'game_finished': player.group.game_finished,
+                'group_stage': player.group.group_stage,
+                'discount_rate': Pother.discount_rate,
+            }
+
+            response[player.id_in_group] = {
+                'game_finished': player.group.game_finished,
+                'group_stage': player.group.group_stage,
+                'discount_rate': player.discount_rate,
             }
 
         return response
