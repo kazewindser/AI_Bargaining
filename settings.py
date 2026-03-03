@@ -36,7 +36,7 @@ SESSION_CONFIG_DEFAULTS = dict(
     real_world_currency_per_point=40, participation_fee=500, doc=""
 )
 
-PARTICIPANT_FIELDS = ['Discounted_points_Per_Round','ROLE',]
+PARTICIPANT_FIELDS = ['PairedLabel','Discounted_points_Per_Round','ROLE']
 SESSION_FIELDS = []
 
 # ISO-639 code

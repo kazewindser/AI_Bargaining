@@ -1,65 +1,107 @@
 {{ block title }}
-    Round {{ player.round_number }}
+<center>Round {{ player.round_number }}</center>
 <br>
 <center>ステージ <span id="group_stage">{{player.group.group_stage}}</span> </center>
 {{ endblock }}
 {{ block content }}
 
-<p>あなたの役割：<b>{{ player.role }}</b></p>
+<!-- 角色和折扣率信息卡片 -->
+<div style="background-color: #e8f4f8; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #17a2b8;">
+    <p style="margin: 5px 0; font-size: 16px;">
+        <span style="color: #666;">あなたの役割：</span>
+        <b style="color: #17a2b8; font-size: 18px;">{{ player.role }}</b>
+    </p>
+    <p style="margin: 5px 0; font-size: 16px;">
+        <span style="color: #666;">この段階でのあなたの割引率：</span>
+        <b style="color: #17a2b8; font-size: 18px;"><span id="discount_rate">{{ discount_rate }}</span></b>
+    </p>
+</div>
 
-<p>この段階でのあなたの割引率：<b><span id="discount_rate">{{ discount_rate }}</span></b></p>
+<!-- 状态消息区域 -->
+<div style="margin-bottom: 20px;">
+    {{ if player.role == 'P2' }}
+    <p style="padding: 15px; background-color: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
+        <span id="p2firstwaiting">⏳ 相手(P1)からの提案を待ってください...</span>
+    </p>
+    {{ endif }}
+    <p id="waiting-decision" style="display: none; padding: 15px; background-color: #e7f3ff; border-radius: 5px; border-left: 4px solid #17a2b8;">
+        <span>🤔 相手があなたの提案を考慮中です。お待ちください...</span>
+    </p>
+    <p style="display: none; padding: 15px; background-color: #d4edda; border-radius: 5px; border-left: 4px solid #28a745;">
+        <span id="Accept">✅ {{ other_role }}はあなたの提案を受け入れました</span>
+    </p>
+    <p style="display: none; padding: 15px; background-color: #f8d7da; border-radius: 5px; border-left: 4px solid #dc3545;">
+        <span id="Reject">❌ {{ other_role }}はあなたの提案を拒否しました。{{ other_role }}の提案をお待ちください。</span>
+    </p>
+    <p style="padding: 10px 15px; background-color: #f8f9fa; border-radius: 5px;">
+        <span id="offertext" style="display: none; color: #666;">相手({{ other_role }})からの提案は</span>
+        <b style="color: #17a2b8; font-size: 18px;"><span id="offerfrom"></span></b>
+    </p>
+</div>
 
-{{ if player.role == 'P2' }}
-<p><span id="p2firstwaiting">相手(P1)からの提案を待ってください...</span></p>
-{{ endif }}
-<p style="display: none;"><span id="Accept">{{ other_role }}はあなたの提案を受け入れました</span></p>
-<p style="display: none;"><span id="Reject">{{ other_role }}はあなたの提案を拒否しました。{{ other_role }}の提案をお待ちください。</span></p>
-<p><span id="offertext" style="display: none;">相手({{ other_role }})からの提案は</span> <span id="offerfrom"></span></p>
 
-
-
-
-    <div class="mb-3 _formfield" id="offer_field" style="display: none;">
-            <label class="col-form-label" for="id_offer_points"> 100ポイント中、{{if player.role == 'P1'}}P2{{else}}P1{{endif}}に手渡すポイントを入力してください。</label>
-            <div class="controls">
-                <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" step="1" name="offer_points" value="" oninput="validateOffer(this)">
-                <button type="button" onclick="sendValue()">提案を出す</button>
-            </div>
+<!-- Offer输入区域 -->
+<div class="mb-3 _formfield" id="offer_field" style="display: none; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #28a745;">
+    <label class="col-form-label" for="id_offer_points" style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 10px; display: block;">
+        💰 100ポイント中、{{if player.role == 'P1'}}P2{{else}}P1{{endif}}に手渡すポイントを入力してください。
+    </label>
+    <div class="controls">
+        <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" step="1" name="offer_points" value="" oninput="validateOffer(this)" style="font-size: 18px; padding: 10px; margin-bottom: 10px;">
+        <button type="button" onclick="sendValue()" style="background-color: #28a745; color: white; padding: 10px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">提案を出す</button>
     </div>
+</div>
 
 
-    <div class="mb-3 _formfield" id="accept_field" style="display: none;">
-            <label class="col-form-label" for="id_accepted_offer">あなたの選択</label>
-            <div class="controls">
-                <div id="id_accepted_offer"><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True"> <label for="id_accepted_offer-0">受け入れる / Accept</label></div><div class="form-check"><input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False"> <label for="id_accepted_offer-1">拒否する / Reject</label></div></div>
-                <button type="button" onclick="sendAccept_Reject()">Send</button>
+<!-- Accept/Reject选择区域 -->
+<div class="mb-3 _formfield" id="accept_field" style="display: none; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #ffc107;">
+    <label class="col-form-label" for="id_accepted_offer" style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; display: block;">
+        🤔 あなたの選択
+    </label>
+    <div class="controls">
+        <div id="id_accepted_offer" style="margin-bottom: 15px;">
+            <div class="form-check" style="margin-bottom: 10px; padding: 10px; background-color: white; border-radius: 5px;">
+                <input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True" style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="id_accepted_offer-0" style="font-size: 16px; cursor: pointer;">✅ 受け入れる</label>
             </div>
+            <div class="form-check" style="padding: 10px; background-color: white; border-radius: 5px;">
+                <input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False" style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="id_accepted_offer-1" style="font-size: 16px; cursor: pointer;">❌ 拒否する</label>
+            </div>
+        </div>
+        <button type="button" onclick="sendAccept_Reject()" style="background-color: #ffc107; color: #333; padding: 10px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">OK</button>
     </div>
+</div>
 
 
-<!-- 🔴 实时预览区域 -->
+<!-- 🔴 Offer实时预览区域 -->
 <div id="preview" style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 5px; display: none;">
-    <h4 style="margin-top: 0; color: #28a745;">📊 提案結果のプレビュー / Offer Preview</h4>
+    <h4 style="margin-top: 0; color: #28a745;">📊 提案結果のプレビュー </h4>
     <table style="width: 100%; border-collapse: collapse;">
         <tr style="border-bottom: 2px solid #dee2e6;">
-            <th style="padding: 8px; text-align: left;">役割 / Role</th>
-            <th style="padding: 8px; text-align: right;">提案したポイント / Original Points</th>
-            <th style="padding: 8px; text-align: right;">割引率 / Discount Rate</th>
-            <th style="padding: 8px; text-align: right;">割引後のポイント / Discounted Points</th>
+            <th style="padding: 8px; text-align: center;">役割 </th>
+            <th style="padding: 8px; text-align: center;">提案したポイント </th>
+            <th style="padding: 8px; text-align: center;">割引率 </th>
+            <th style="padding: 8px; text-align: center;">割引後のポイント </th>
         </tr>
         <tr style="background-color: #e7f3ff;">
-            <td style="padding: 8px;"><b>あなた ({{ player.role }})</b></td>
-            <td style="padding: 8px; text-align: right;"><span id="you-original">-</span></td>
-            <td style="padding: 8px; text-align: right;"><span id="you-discount">-</span></td>
-            <td style="padding: 8px; text-align: right;"><strong><span id="you-discounted">-</span></strong></td>
+            <td style="padding: 8px; text-align: center;"><b>あなた ({{ player.role }})</b></td>
+            <td style="padding: 8px; text-align: center;"><span id="you-original">-</span></td>
+            <td style="padding: 8px; text-align: center;"><span id="you-discount">-</span></td>
+            <td style="padding: 8px; text-align: center;"><strong><span id="you-discounted">-</span></strong></td>
         </tr>
         <tr>
-            <td style="padding: 8px;"><b>{{ other_role }}</b></td>
-            <td style="padding: 8px; text-align: right;"><span id="other-original">-</span></td>
-            <td style="padding: 8px; text-align: right;"><span id="other-discount">-</span></td>
-            <td style="padding: 8px; text-align: right;"><strong><span id="other-discounted">-</span></strong></td>
+            <td style="padding: 8px; text-align: center;"><b>相手({{ other_role }})</b></td>
+            <td style="padding: 8px; text-align: center;"><span id="other-original">-</span></td>
+            <td style="padding: 8px; text-align: center;"><span id="other-discount">-</span></td>
+            <td style="padding: 8px; text-align: center;"><strong><span id="other-discounted">-</span></strong></td>
         </tr>
     </table>
+</div>
+
+<!-- 🔴 Accept/Reject实时预览区域 -->
+<div id="decision-preview" style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107; border-radius: 5px; display: none;">
+    <h4 style="margin-top: 0; color: #856404;">⚠️ 選択結果のプレビュー</h4>
+    <p id="decision-message" style="font-size: 16px; margin: 10px 0;"></p>
 </div>
 
 
@@ -80,13 +122,122 @@
   let offerfrom = document.getElementById('offerfrom');
   let acceptMsg = document.getElementById('Accept');
   let rejectMsg = document.getElementById('Reject');
+  let waitingDecision = document.getElementById('waiting-decision');
 
   // 跟踪当前stage是否已收到offer
   let receivedOfferInCurrentStage = false;
+  // 跟踪当前stage是否已发送offer
+  let sentOfferInCurrentStage = false;
 
   let discount_rate = document.getElementById('discount_rate');
 
+  // 预览区域元素
+  let previewDiv = document.getElementById('preview');
+  let youOriginal = document.getElementById('you-original');
+  let youDiscount = document.getElementById('you-discount');
+  let youDiscounted = document.getElementById('you-discounted');
+  let otherOriginal = document.getElementById('other-original');
+  let otherDiscount = document.getElementById('other-discount');
+  let otherDiscounted = document.getElementById('other-discounted');
 
+  // Accept/Reject预览区域元素
+  let decisionPreview = document.getElementById('decision-preview');
+  let decisionMessage = document.getElementById('decision-message');
+
+  // 保存收到的offer值
+  let receivedOfferValue = 0;
+
+  // 折扣率常量
+  const DISCOUNT_P1 = 0.6;
+  const DISCOUNT_P2 = 0.4;
+
+  // 计算当前折扣率
+  function getCurrentDiscountRate(role, stage) {
+    let baseRate = 1;
+    let discountFactor = (role === 'P1') ? DISCOUNT_P1 : DISCOUNT_P2;
+    for (let i = 1; i < stage; i++) {
+      baseRate *= discountFactor;
+    }
+    return baseRate;
+  }
+
+  // 更新实时预览
+  function updatePreview() {
+    let offerValue = parseInt(offer_points.value);
+
+    if (isNaN(offerValue) || offerValue < 0 || offerValue > 100 || offer_points.value === '') {
+      // 输入无效时隐藏预览
+      previewDiv.style.display = 'none';
+      return;
+    }
+
+    // 显示预览
+    previewDiv.style.display = 'block';
+
+    let currentStage = parseInt(stageElem.innerHTML);
+    let yourDiscountRate = getCurrentDiscountRate(playerRole, currentStage);
+    let otherRole = playerRole === 'P1' ? 'P2' : 'P1';
+    let otherDiscountRate = getCurrentDiscountRate(otherRole, currentStage);
+
+    // 你的点数 = 100 - offer（给对方的）
+    let yourPoints = 100 - offerValue;
+    // 对方的点数 = offer
+    let otherPoints = offerValue;
+
+    // 更新显示
+    youOriginal.textContent = yourPoints;
+    youDiscount.textContent = yourDiscountRate.toFixed(3).replace(/\.?0+$/, '');
+    youDiscounted.textContent = (yourPoints * yourDiscountRate).toFixed(2);
+
+    otherOriginal.textContent = otherPoints;
+    otherDiscount.textContent = otherDiscountRate.toFixed(3).replace(/\.?0+$/, '');
+    otherDiscounted.textContent = (otherPoints * otherDiscountRate).toFixed(2);
+  }
+
+  // 更新Accept/Reject决策预览
+  function updateDecisionPreview() {
+    let selectedRadio = document.querySelector('input[name="accepted_offer"]:checked');
+
+    if (!selectedRadio) {
+      decisionPreview.style.display = 'none';
+      return;
+    }
+
+    decisionPreview.style.display = 'block';
+    let currentStage = parseInt(stageElem.innerHTML);
+    let isAccept = selectedRadio.value === 'True';
+
+    if (isAccept) {
+      // 用户选择接受
+      let yourDiscountRate = getCurrentDiscountRate(playerRole, currentStage);
+      let otherRole = playerRole === 'P1' ? 'P2' : 'P1';
+      let otherDiscountRate = getCurrentDiscountRate(otherRole, currentStage);
+
+      // 接受方得到receivedOfferValue，发送方得到100-receivedOfferValue
+      let yourPoints = receivedOfferValue;
+      let otherPoints = 100 - receivedOfferValue;
+      let yourDiscounted = (yourPoints * yourDiscountRate).toFixed(2);
+      let otherDiscounted = (otherPoints * otherDiscountRate).toFixed(2);
+
+      decisionMessage.innerHTML = `<strong>受け入れる場合：</strong><br>
+        ラウンド終了。<br>
+        あなたは<strong>${yourDiscounted}ポイント</strong>を獲得します。<br>
+        相手は<strong>${otherDiscounted}ポイント</strong>を獲得します。`;
+    } else {
+      // 用户选择拒绝
+      if (currentStage >= 3) {
+        // Stage 3或以上拒绝，游戏结束
+        decisionMessage.innerHTML = `<strong>拒否する場合：</strong><br>
+          ラウンド終了。<br>
+          あなたは<strong>0ポイント</strong>を獲得します。<br>
+          相手も<strong>0ポイント</strong>を獲得します。`;
+      } else {
+        // Stage 1-2拒绝，进入下一stage
+        decisionMessage.innerHTML = `<strong>拒否する場合：</strong><br>
+          次のステージ（ステージ${currentStage + 1}）に進みます。`;
+      }
+    }
+  }
 
   // 控制offer_field和accept_field的显示逻辑
   function updateFieldsVisibility() {
@@ -96,24 +247,34 @@
 
     if (playerRole === 'P1') {
       // P1在stage 1, 3出价，在stage 2, 4接受/拒绝（需要收到offer后才显示）
-      shouldShowOffer = (currentStage === 1 || currentStage === 3);
+      shouldShowOffer = (currentStage === 1 || currentStage === 3) && !sentOfferInCurrentStage;
       shouldShowAccept = (currentStage === 2 || currentStage === 4) && receivedOfferInCurrentStage;
     } else if (playerRole === 'P2') {
       // P2在stage 2, 4出价，在stage 1, 3接受/拒绝（需要收到offer后才显示）
-      shouldShowOffer = (currentStage === 2 || currentStage === 4);
+      shouldShowOffer = (currentStage === 2 || currentStage === 4) && !sentOfferInCurrentStage;
       shouldShowAccept = (currentStage === 1 || currentStage === 3) && receivedOfferInCurrentStage;
     }
+
+    // 检测offer_field是否从隐藏变为显示
+    let wasOfferHidden = offerField.style.display === 'none';
 
     offerField.style.display = shouldShowOffer ? 'block' : 'none';
     accept_field.style.display = shouldShowAccept ? 'block' : 'none';
 
     // 重新显示时清空输入值
-    if (shouldShowOffer) {
+    if (shouldShowOffer && wasOfferHidden) {
       offer_points.value = '';
-      receivedOfferInCurrentStage = false; // 重置标志
+      previewDiv.style.display = 'none'; // 隐藏预览
+    }
+    if (!shouldShowOffer) {
+      previewDiv.style.display = 'none'; // offer_field隐藏时也隐藏预览
     }
     if (shouldShowAccept) {
       document.querySelectorAll('input[name="accepted_offer"]').forEach(radio => radio.checked = false);
+      decisionPreview.style.display = 'none'; // 清空选择时隐藏决策预览
+    }
+    if (!shouldShowAccept) {
+      decisionPreview.style.display = 'none'; // accept_field隐藏时也隐藏决策预览
     }
   }
 
@@ -131,26 +292,61 @@
       numValue = 0;
     }
     input.value = numValue || '';
+
+    // 更新实时预览
+    updatePreview();
   }
 
   // 页面加载时初始化
   updateFieldsVisibility();
 
+  // 为Accept/Reject radio按钮添加事件监听
+  document.querySelectorAll('input[name="accepted_offer"]').forEach(radio => {
+    radio.addEventListener('change', updateDecisionPreview);
+  });
+
   function liveRecv(data) {
     console.log('received a message!', data);
+
+    // 先检查stage是否变化
+    let stageChanged = false;
+    if (data['group_stage'] !== undefined) {
+      let oldStage = parseInt(stageElem.innerHTML);
+      let newStage = parseInt(data['group_stage']);
+      if (oldStage !== newStage) {
+        stageChanged = true;
+        stageElem.innerHTML = data['group_stage'];
+        // stage真正变化时，隐藏之前的消息和重置标志
+        acceptMsg.parentElement.style.display = 'none';
+        rejectMsg.parentElement.style.display = 'none';
+        receivedOfferInCurrentStage = false;
+        sentOfferInCurrentStage = false; // 重置发送标志
+      }
+    }
 
     if (data['otherOffer'] !== undefined) {
       // 收到对方的offer
       receivedOfferInCurrentStage = true;
+      receivedOfferValue = data['otherOffer']; // 保存收到的offer值
       if (p2firstwaiting) p2firstwaiting.style.display = 'none';
       rejectMsg.parentElement.style.display = 'none'; // 隐藏Reject消息
       offertext.style.display = 'inline';
       offerfrom.innerHTML = data['otherOffer'];
     }
 
+    if (data['otherIsConsidering'] !== undefined) {
+      // 对方正在考虑你的提案
+      if (data['otherIsConsidering'] === true) {
+        waitingDecision.style.display = 'block';
+      } else {
+        waitingDecision.style.display = 'none';
+      }
+    }
+
     if (data['otherAcceptance'] !== undefined) {
       // 收到对方的acceptance回应
       console.log('对方的回应:', data['otherAcceptance']);
+      waitingDecision.style.display = 'none'; // 隐藏等待消息
       if (data['otherAcceptance'] === true) {
         // 接受了
         acceptMsg.parentElement.style.display = 'block';
@@ -162,19 +358,18 @@
       }
     }
 
-    updateFieldsVisibility();
-
     if (data['game_finished']) {
         document.getElementById("form").submit();
     }
 
-      // 更新stage显示
-    if (data['group_stage'] !== undefined) {
-      stageElem.innerHTML = data['group_stage'];
+    // 更新discout_rate显示
+    if (data['discount_rate'] !== undefined) {
+      // 格式化为最多3位小数，去除尾部多余的0
+      let rate = parseFloat(data['discount_rate']);
+      discount_rate.innerHTML = rate.toFixed(3).replace(/\.?0+$/, '');
     }
 
-    // 更新discout_rate显示
-      discount_rate.innerHTML = data['discount_rate'];
+    updateFieldsVisibility();
 
   }
 
@@ -190,7 +385,9 @@
       type: 'offer',
       value: value
     });
+    sentOfferInCurrentStage = true; // 标记已发送offer
     offerField.style.display = 'none';
+    previewDiv.style.display = 'none'; // 隐藏offer预览
 
   }
 
