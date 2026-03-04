@@ -3,8 +3,23 @@
 {{ endblock }}
 
 {{ block content }}
-     このラウンドで{{player.Discounted_points}}ポイント獲得しました。
-    {{ next_button }}
-{{ endblock }}
+<div style="text-align: center; padding: 40px 20px;">
+    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 40px; border-radius: 20px; box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3); max-width: 600px; margin: 0 auto; border: 3px solid #2196f3;">
 
+        <p style="color: #666; font-size: 20px; line-height: 1.6; margin-bottom: 20px;">
+            このラウンドが終了しました。
+        </p>
+        <div style="margin-top: 30px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); border-radius: 10px; border-left: 5px solid #1976d2;">
+            <p style="color: #555; font-size: 18px; margin: 0;">
+                <strong>獲得ポイント：</strong><span style="color: #1976d2; font-size: 24px; font-weight: bold;">{{ player.Discounted_points }}</span>
+            </p>
+        </div>
+    </div>
+</div>
+
+
+<div style="text-align: center; margin-top: 30px;">
+    {{ next_button }}
+</div>
+{{ endblock }}
 

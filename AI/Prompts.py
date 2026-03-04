@@ -57,45 +57,8 @@ Follow the game rules defined in the system prompt.
 """
 
 
-AIP1toHumanP2stage1 = None
-HumanP2toAIP1stage2 = None
-user_prompt_P1_stage2_stage3=f"""
-Follow the game rules defined in the system prompt.
--Role: P1
--The human player is P2.
--Current Stage: 2
--Stage 1 history:
-You proposed {AIP1toHumanP2stage1} points to P2.
-P2 rejected the offer.
 
--Stage 2: P2 has decided to propose {HumanP2toAIP1stage2} points to you.
 
--Decision required:
-1. Decide whether to ACCEPT this offer: Whether_to_accept_P2_offer_stage2: <TRUE/FALSE>
-2. If you REJECT, propose an offer (0–100) to P2 for Stage 3: Offer_to_P2_if_rejected_proceed_to_stage3: <integer or -1 if accepted>
-"""
-
-HumanP1toAIP2stage1 = None
-AIP2toHumanP1stage2 = None
-HumanP1toAIP2stage3 = None
-user_prompt_P2_stage3_end=f"""
-Follow the game rules defined in the system prompt.
-Role: P2
-The human player is P1.
-
-Current Stage: 3
-
--History:
-
--Stage 1: P1 proposed {HumanP1toAIP2stage1} points to you. You rejected the offer.
-
--Stage 2: You proposed {AIP2toHumanP1stage2} points to P1. P1 rejected the offer.
-
--Stage 3: P1 now proposes {HumanP1toAIP2stage3} points to you.
-
--Decision required:
-Decide whether to accept the offer: Whether_to_accept_P1_offer_stage3: <TRUE/FALSE>
-"""
 
 
 

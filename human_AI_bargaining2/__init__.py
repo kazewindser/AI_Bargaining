@@ -9,7 +9,7 @@ def get_openai_client():
     """获取 OpenAI 客户端"""
     try:
         from openai import OpenAI
-        api_key = os.environ.get("OPENAI_API_KEY")
+        api_key = os.environ.get("")
         if api_key is None:
             print("[OpenAI] Warning: OPENAI_API_KEY not set")
             return None

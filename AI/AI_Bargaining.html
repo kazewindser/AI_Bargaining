@@ -31,19 +31,19 @@
     <p style="display: none; padding: 15px; background-color: #f8d7da; border-radius: 5px; border-left: 4px solid #dc3545;">
         <span id="Reject">❌ {{ AI_role }}(AI)はあなたの提案を拒否しました。</span>
     </p>
-<p style="padding: 10px 15px; background-color: #f8f9fa; border-radius: 5px;">
-    <span id="offertext"
-          style="display: {{ if player.Role == 'P2' }}inline{{ else }}none{{ endif }}; color: #666;">
+
+<p id="offer_info" style="padding: 10px 15px; background-color: #f8f9fa; border-radius: 5px; {{ if player.Role == 'P1' }}display: none;{{ endif }}">
+    <span id="offertext" style="color: #666;">
         AI({{ AI_role }})からの提案は
     </span>
 
     <b style="color: #17a2b8; font-size: 18px;">
-        <span id="offerfrom"
-              style="display: {{ if player.Role == 'P2' }}inline{{ else }}none{{ endif }};">
+        <span id="offerfrom">
             {{ AIP1toHumanP2stage1 }}
         </span>
     </b>
 </p>
+
 </div>
 
 
@@ -67,15 +67,21 @@
     <div class="controls">
         <div id="id_accepted_offer" style="margin-bottom: 15px;">
             <div class="form-check" style="margin-bottom: 10px; padding: 10px; background-color: white; border-radius: 5px;">
-                <input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True" style="width: 20px; height: 20px; margin-right: 10px;">
+                <input class="form-check-input" type="radio" id="id_accepted_offer-0" name="accepted_offer" value="True" style="width: 20px; height: 20px; margin-right: 10px;" onchange="previewAcceptReject()">
                 <label for="id_accepted_offer-0" style="font-size: 16px; cursor: pointer;">✅ 受け入れる</label>
             </div>
             <div class="form-check" style="padding: 10px; background-color: white; border-radius: 5px;">
-                <input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False" style="width: 20px; height: 20px; margin-right: 10px;">
+                <input class="form-check-input" type="radio" id="id_accepted_offer-1" name="accepted_offer" value="False" style="width: 20px; height: 20px; margin-right: 10px;" onchange="previewAcceptReject()">
                 <label for="id_accepted_offer-1" style="font-size: 16px; cursor: pointer;">❌ 拒否する</label>
             </div>
         </div>
-        <button type="button" onclick="sendAccept_Reject()" style="background-color: #ffc107; color: #333; padding: 10px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">OK</button>
+
+        <!-- Accept/Reject预览区域 -->
+        <div id="accept_reject_preview" style="display: none; margin-top: 15px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+            <p id="accept_preview_text" style="margin: 0; color: #856404; font-size: 16px; line-height: 1.6;"></p>
+        </div>
+
+        <button type="button" onclick="sendAccept_Reject()" style="background-color: #ffc107; color: #333; padding: 10px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 15px;">OK</button>
     </div>
 </div>
 
@@ -106,6 +112,15 @@
     </table>
 </div>
 
+<!-- 🔴 Accept/Reject实时预览区域 -->
+<div id="decision-preview" style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107; border-radius: 5px; display: none;">
+    <h4 style="margin-top: 0; color: #856404;">⚠️ 選択結果のプレビュー</h4>
+    <p id="decision-message" style="font-size: 16px; margin: 10px 0;"></p>
+</div>
+
+
+
+
 {{ endblock }}
 
 
@@ -122,6 +137,105 @@
     let offer_value = 0
 
     let rejectMsg = document.getElementById('Reject');
+    let previewDiv = document.getElementById('preview');
+
+    function validateOffer(input) {
+      let value = parseInt(input.value);
+
+      // 如果输入有效，显示预览
+      if (!isNaN(value) && value >= 0 && value <= 100) {
+        // 获取当前角色和折扣率
+        let playerRole = '{{ player.Role }}';
+        let currentDiscountRate = parseFloat(discount_rate.textContent);
+
+        // 计算对方的折扣率
+        // P1的折扣率规则：每阶段 * 0.6
+        // P2的折扣率规则：每阶段 * 0.4
+        // 对方的折扣率计算：如果你是P1(0.6规则)，对方是P2(0.4规则)；反之亦然
+        let otherDiscountRate;
+        if (playerRole === 'P1') {
+          // 你是P1(用0.6)，对方是P2(用0.4)
+          // 你的折扣率 = 1 * 0.6^n，对方 = 1 * 0.4^n
+          // 计算：0.6^n = currentDiscountRate，求 0.4^n
+          if (currentDiscountRate === 1) {
+            otherDiscountRate = 1;
+          } else {
+            let n = Math.log(currentDiscountRate) / Math.log(0.6);
+            otherDiscountRate = Math.pow(0.4, n);
+          }
+        } else {
+          // 你是P2(用0.4)，对方是P1(用0.6)
+          // 你的折扣率 = 1 * 0.4^n，对方 = 1 * 0.6^n
+          if (currentDiscountRate === 1) {
+            otherDiscountRate = 1;
+          } else {
+            let n = Math.log(currentDiscountRate) / Math.log(0.4);
+            otherDiscountRate = Math.pow(0.6, n);
+          }
+        }
+
+        // 计算各方的点数
+        let youOriginal, otherOriginal;
+        if (playerRole === 'P1') {
+          // P1提出给P2多少点
+          youOriginal = 100 - value;  // P1自己保留的点数
+          otherOriginal = value;       // P2获得的点数
+        } else {
+          // P2提出给P1多少点
+          youOriginal = 100 - value;  // P2自己保留的点数
+          otherOriginal = value;       // P1获得的点数
+        }
+
+        // 计算折扣后的点数
+        let youDiscounted = (youOriginal * currentDiscountRate).toFixed(2);
+        let otherDiscounted = (otherOriginal * otherDiscountRate).toFixed(2);
+
+        // 更新预览区域
+        document.getElementById('you-original').textContent = youOriginal;
+        document.getElementById('you-discount').textContent = currentDiscountRate.toFixed(2);
+        document.getElementById('you-discounted').textContent = youDiscounted;
+        document.getElementById('other-original').textContent = otherOriginal;
+        document.getElementById('other-discount').textContent = otherDiscountRate.toFixed(2);
+        document.getElementById('other-discounted').textContent = otherDiscounted;
+
+        // 显示预览区域
+        previewDiv.style.display = 'block';
+      } else {
+        // 输入无效，隐藏预览
+        previewDiv.style.display = 'none';
+      }
+    }
+
+    function previewAcceptReject() {
+      let selectedRadio = document.querySelector('input[name="accepted_offer"]:checked');
+      let previewDiv = document.getElementById('accept_reject_preview');
+      let previewText = document.getElementById('accept_preview_text');
+
+      if (!selectedRadio) {
+        previewDiv.style.display = 'none';
+        return;
+      }
+
+      let currentDiscountRate = parseFloat(discount_rate.textContent);
+      let currentStage = parseInt(CurrentStage.textContent);
+      let offerValue = parseInt(offerfrom.textContent);
+
+      if (selectedRadio.value === 'True') {
+        // Accept: 显示会获得的点数
+        let yourPoints = (offerValue * currentDiscountRate).toFixed(2);
+        previewText.innerHTML = `✅ <strong>受け入れる場合：</strong><br>あなたは <span style="color: #28a745; font-weight: bold; font-size: 18px;">${yourPoints}ポイント</span> を獲得します。`;
+        previewDiv.style.display = 'block';
+      } else {
+        // Reject: 根据当前stage显示不同信息
+        if (currentStage >= 3) {
+          previewText.innerHTML = `❌ <strong>拒否する場合：</strong><br>このラウンドは終了し、あなたは <span style="color: #dc3545; font-weight: bold; font-size: 18px;">0ポイント</span> を獲得します。`;
+        } else {
+          let nextStage = currentStage + 1;
+          previewText.innerHTML = `❌ <strong>拒否する場合：</strong><br>ステージ ${nextStage} に進みます。あなたが次のOfferを提案できます。`;
+        }
+        previewDiv.style.display = 'block';
+      }
+    }
 
     function sendValue() {
     let value = parseInt(offer_points.value);
@@ -138,6 +252,7 @@
     sentOfferInCurrentStage = true; // 标记已发送offer
     offer_field.style.display = 'none';
     previewDiv.style.display = 'none'; // 隐藏offer预览
+    rejectMsg.parentElement.style.display = 'none'; // 隐藏Reject消息
 
   }
 
@@ -163,19 +278,56 @@
     console.log('received a message!', data);
 
     if (data['AIaccept'] !== undefined) {
-      // 收到对方的acceptance回应
+      // 收到对方的acceptance回应 (P1收到AI P2的回应)
       console.log('对方的回应:', data['AIaccept']);
       if (data['AIaccept'] === false) {
         rejectMsg.parentElement.style.display = 'block';
-        offerfrom.innerHTML = data['AIOffer'];
-        offertext.style.display = 'block';
-        accept_field.style.display = 'block';
+
+        // 如果当前stage是3且AI拒绝，游戏结束，不显示accept_field
+        let currentStage = parseInt(CurrentStage.textContent);
+        if (currentStage < 3 && data['AIOffer'] !== undefined) {
+          offerfrom.innerHTML = data['AIOffer'];
+          document.getElementById('offer_info').style.display = 'block';
+          accept_field.style.display = 'block';
+          // 清空之前的radio选择
+          document.querySelectorAll('input[name="accepted_offer"]').forEach(radio => {
+            radio.checked = false;
+          });
+        }
+
+        if (data['CurrentStage'] !== undefined) {
+          CurrentStage.innerHTML = data['CurrentStage'];
+        }
+        if (data['Current_discount_rate'] !== undefined) {
+          discount_rate.innerHTML = parseFloat(data['Current_discount_rate']).toFixed(2);
+        }
+      } else if (data['AIaccept'] === true) {
+        // AI接受了offer，显示接受消息
+        Accept.parentElement.style.display = 'block';
+        rejectMsg.parentElement.style.display = 'none';
+      }
+    }
+
+    // P2拒绝后收到后端确认，显示offer_field让P2发出counter-offer
+    if (data['CurrentStage'] !== undefined && data['AIaccept'] === undefined) {
+      CurrentStage.innerHTML = data['CurrentStage'];
+      if (data['Current_discount_rate'] !== undefined) {
+        discount_rate.innerHTML = parseFloat(data['Current_discount_rate']).toFixed(2);
+      }
+      // 如果游戏未结束，显示offer_field
+      if (!data['game_finished']) {
+        offer_points.value = '';
+        offer_field.style.display = 'block';
+        document.getElementById('offer_info').style.display = 'none';
       }
     }
 
     if (data['game_finished'] !== undefined) {
         if (data['game_finished'] === true) {
-                 document.getElementById("form").submit();
+                 // 延迟1秒后跳转，让用户看到结果
+                 setTimeout(function() {
+                     document.getElementById("form").submit();
+                 }, 1000);
         }
     }
 }

@@ -16,17 +16,21 @@ MODEL = "gpt-5.2"
 TEMP = 1
 
 class P1_stage1_initial(BaseModel):
+    # AI作为p1一开始的offer
     Offer_to_P2_stage1: int = Field(ge=0, le=100)
 
 class P1_stage2_stage3(BaseModel):
+    # AI作为P1在stage2要不要接受或者拒绝进入stage3
     Whether_to_accept_P2_offer_stage2: bool
     Offer_to_P2_if_rejected_proceed_to_stage3: int
 
 class P2_stage1_stage2(BaseModel):
+    # AI作为P2在stage1要不要接受或者拒绝进入stage2
     Whether_to_accept_P1_offer_stage1: bool
     Offer_to_P1_if_rejected_proceed_to_stage2: int
 
 class P2_stage3_end(BaseModel):
+    # AI作为P2在stage3要不要接受或者拒绝然后结束
     Whether_to_accept_P1_offer_stage3: bool
 
 def ElicitAIResp_P1_stage1_initial():
@@ -69,6 +73,76 @@ def ElicitAIResp_P2_stage1_stage2(player):
         ],
         temperature=TEMP,
         text_format=P2_stage1_stage2,
+    )
+    response_content = response.output_parsed
+    prediction_dict = response_content.model_dump()
+    return prediction_dict
+
+def ElicitAIResp_P2_stage3_end(player):
+    HumanP1toAIP2stage1 = player.HumanP1toAIP2stage1
+    AIP2toHumanP1stage2 = player.AIP2toHumanP1stage2
+    HumanP1toAIP2stage3 = player.HumanP1toAIP2stage3
+
+    user_prompt_P2_stage3_end = f"""
+    Follow the game rules defined in the system prompt.
+    Role: P2
+    The human player is P1.
+
+    Current Stage: 3
+    -History:
+    -Stage 1: P1 proposed {HumanP1toAIP2stage1} points to you. You rejected the offer.
+    -Stage 2: You proposed {AIP2toHumanP1stage2} points to P1. P1 rejected the offer.
+    -Stage 3: P1 now proposes {HumanP1toAIP2stage3} points to you.
+
+    -Decision required:
+    Decide whether to accept the offer: Whether_to_accept_P1_offer_stage3: <TRUE/FALSE>
+    """
+    print(user_prompt_P2_stage3_end)
+    response = client.responses.parse(
+        model=MODEL,
+        input=[
+            {"role": "system",
+             "content": SYSTEM_PROMPT},
+            {"role": "user",
+             "content": user_prompt_P2_stage3_end}
+        ],
+        temperature=TEMP,
+        text_format=P2_stage3_end,
+    )
+    response_content = response.output_parsed
+    prediction_dict = response_content.model_dump()
+    return prediction_dict
+
+def ElicitAIResp_P1_stage2_stage3(player):
+    AIP1toHumanP2stage1 = player.AIP1toHumanP2stage1
+    HumanP2toAIP1stage2 = player.HumanP2toAIP1stage2
+    user_prompt_P1_stage2_stage3 = f"""
+    Follow the game rules defined in the system prompt.
+    -Role: P1
+    -The human player is P2.
+    -Current Stage: 2
+    -Stage 1 history:
+    You proposed {AIP1toHumanP2stage1} points to P2.
+    P2 rejected the offer.
+
+    -Stage 2: P2 has decided to propose {HumanP2toAIP1stage2} points to you.
+
+    -Decision required:
+    1. Decide whether to ACCEPT this offer: Whether_to_accept_P2_offer_stage2: <TRUE/FALSE>
+    2. If you REJECT, propose an offer (0–100) to P2 for Stage 3: Offer_to_P2_if_rejected_proceed_to_stage3: <integer or -1 if accepted>
+    """
+
+    print(user_prompt_P1_stage2_stage3)
+    response = client.responses.parse(
+        model=MODEL,
+        input=[
+            {"role": "system",
+             "content": SYSTEM_PROMPT},
+            {"role": "user",
+             "content": user_prompt_P1_stage2_stage3}
+        ],
+        temperature=TEMP,
+        text_format=P1_stage2_stage3,
     )
     response_content = response.output_parsed
     prediction_dict = response_content.model_dump()
@@ -159,12 +233,12 @@ def SaveQ(subsession):
 
 # PAGES
 class Title(Page):
-    timeout_seconds = 0.1
+    timeout_seconds = 10
     @staticmethod
     def is_displayed(player):
-        #player.Role = random.choice(['P1', 'P2'])
+        player.Role = random.choice(['P1', 'P2'])
         #player.Role = 'P1'
-        player.Role = 'P2'
+        #player.Role = 'P2'
         return player.round_number == 1
 
 class AI_Bargaining(Page):
@@ -177,6 +251,7 @@ class AI_Bargaining(Page):
         AI_role = 'P1' if player.Role == 'P2' else 'P2'
         if player.Role == 'P2':
             player.AIP1toHumanP2stage1 = ElicitAIResp_P1_stage1_initial()
+            player.potential_point = player.AIP1toHumanP2stage1
         AIP1toHumanP2stage1 = player.AIP1toHumanP2stage1
         return dict(
             CurrentStage = player.CurrentStage,
@@ -190,24 +265,76 @@ class AI_Bargaining(Page):
         response = {}
 
         if data['type'] == 'offer':
-            if player.Role == 'P1' and player.CurrentStage == 1:
-                player.HumanP1toAIP2stage1 = data['value']
-                player.potential_point = 100-player.HumanP1toAIP2stage1
-                AIP2stage1Resp = ElicitAIResp_P2_stage1_stage2(player)
-                if AIP2stage1Resp['Whether_to_accept_P1_offer_stage1']:
-                    player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
-                    player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+            if player.Role == 'P1':
+                if player.CurrentStage == 1:
+                    player.HumanP1toAIP2stage1 = data['value']
+                    player.potential_point = 100-player.HumanP1toAIP2stage1
+                    AIP2stage1Resp = ElicitAIResp_P2_stage1_stage2(player)
+                    Accepted = AIP2stage1Resp['Whether_to_accept_P1_offer_stage1']
+                    OfferifRejected = AIP2stage1Resp['Offer_to_P1_if_rejected_proceed_to_stage2']
+                    if Accepted:
+                        player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
+                        player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                        player.game_finished = True
+                    else:
+                        player.potential_point = OfferifRejected
+                        player.AIP2toHumanP1stage2 = OfferifRejected
+                        player.CurrentStage += 1
+                        player.discount_rate *= 0.6
+                        print('Offer_to_P1_if_rejected_proceed_to_stage2:', OfferifRejected)
+
+                    response[player.id_in_group] = {
+                        'game_finished': player.game_finished,
+                        'AIaccept': Accepted,
+                        'AIOffer': OfferifRejected,
+                        'Current_discount_rate': player.discount_rate,
+                        'CurrentStage': player.CurrentStage,
+                        }
+                if player.CurrentStage == 3:
+                    player.HumanP1toAIP2stage3 = data['value']
+                    player.potential_point = 100 - player.HumanP1toAIP2stage3
+                    AIP2stage3Resp = ElicitAIResp_P2_stage3_end(player)
+                    Accepted = AIP2stage3Resp['Whether_to_accept_P1_offer_stage3']
+                    if Accepted:
+                        player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
+                        player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                    else:
+                        player.Discounted_points = 0
+                        player.AIdiscounted_points = 0
+                        #不管怎么说都结束了
                     player.game_finished = True
-                else:
-                    player.potential_point = AIP2stage1Resp['Offer_to_P1_if_rejected_proceed_to_stage2']
-                    print('Offer_to_P1_if_rejected_proceed_to_stage2:', player.potential_point)
+
+                    response[player.id_in_group] = {
+                        'game_finished': player.game_finished,
+                        'AIaccept': Accepted,
+                    }
+
+            if player.Role == 'P2':
+                if player.CurrentStage == 2:
+                    player.HumanP2toAIP1stage2 = data['value']
+                    player.potential_point = 100 - player.HumanP2toAIP1stage2
+                    AIP1stage2Resp = ElicitAIResp_P1_stage2_stage3(player)
+                    Accepted = AIP1stage2Resp['Whether_to_accept_P2_offer_stage2']
+                    OfferifRejected = AIP1stage2Resp['Offer_to_P2_if_rejected_proceed_to_stage3']
+                    if Accepted:
+                        player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
+                        player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                        player.game_finished = True
+                    else:
+                        player.potential_point = OfferifRejected
+                        player.CurrentStage += 1
+                        player.discount_rate *= 0.4
 
                 response[player.id_in_group] = {
                     'game_finished': player.game_finished,
-                    'AIaccept': AIP2stage1Resp['Whether_to_accept_P1_offer_stage1'],
-                    'AIOffer': AIP2stage1Resp['Offer_to_P1_if_rejected_proceed_to_stage2'],
+                    'AIaccept': Accepted,
+                    'AIOffer': OfferifRejected,
+                    'Current_discount_rate': player.discount_rate,
                     'CurrentStage': player.CurrentStage,
                 }
+
+
+
 
         elif data['type'] == 'acceptance':
             # Convert string 'True'/'False' to boolean if needed
@@ -225,14 +352,14 @@ class AI_Bargaining(Page):
                         player.Discounted_points = 0
                         player.AIdiscounted_points = 0
                     else:
-                        player.discount_rate *= C.DISCOUNT_P1 if player.role == C.P1_ROLE else C.DISCOUNT_P2
-                        player.AIdiscount_rate *= C.DISCOUNT_P2 if player.role == C.P1_ROLE else C.DISCOUNT_P1
+                        player.discount_rate *= C.DISCOUNT_P1 if player.Role == C.P1_ROLE else C.DISCOUNT_P2
+                        player.AIdiscount_rate *= C.DISCOUNT_P2 if player.Role == C.P1_ROLE else C.DISCOUNT_P1
                     
                     
             response[player.id_in_group] = {
                 'game_finished': player.game_finished,
                 'CurrentStage': player.CurrentStage,
-                'discount_rate': player.discount_rate,
+                'Current_discount_rate': player.discount_rate,
                 'AIdiscount_rate': player.AIdiscount_rate,
             }
         return response

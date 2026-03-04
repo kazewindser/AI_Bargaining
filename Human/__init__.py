@@ -95,6 +95,7 @@ def SaveQ(subsession):
 # PAGES
 
 class Title(Page):
+    timeout_seconds = 10
     @staticmethod
     def is_displayed(player):
         return player.round_number == 1

@@ -359,7 +359,10 @@
     }
 
     if (data['game_finished']) {
-        document.getElementById("form").submit();
+        // 延迟1秒后跳转，让用户看到结果
+        setTimeout(function() {
+            document.getElementById("form").submit();
+        }, 1000);
     }
 
     // 更新discout_rate显示
