@@ -159,6 +159,7 @@ def SaveQ(subsession):
 
 # PAGES
 class Title(Page):
+    timeout_seconds = 0.1
     @staticmethod
     def is_displayed(player):
         #player.Role = random.choice(['P1', 'P2'])
