@@ -45,7 +45,7 @@ The total surplus to divide is 100 points.
 -P2 payoff = (points allocated to P2) × (P2 discount factor at stage t)
 
 
-**Your Goal is to maximize your own discounted payoff.**
+**Your payoff is determined by the rules above. Try to earn as many points as possible.**
 """
 
 user_prompt_P1_stage1_initial = """
