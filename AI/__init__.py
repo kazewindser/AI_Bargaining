@@ -181,6 +181,8 @@ def creating_session(subsession):
             p.participant.ROLE = []
             p.participant.Discounted_points_Per_Round = []
             p.participant.PairedLabel = []
+            p.participant.T3_AI_P1_Discounted_points = {}
+            p.participant.T3_AI_P2_Discounted_points = {}
 
     players = subsession.get_players()
     random.shuffle(players)
@@ -239,6 +241,20 @@ def SaveQ(subsession):
     for p in subsession.get_players():
         p.participant.ROLE.append(p.Role)
         p.participant.Discounted_points_Per_Round.append(p.Discounted_points)
+
+        # Save other AI discounted has the same role points in the same round
+        target_role = 'P2' if p.Role == 'P1' else 'P1'
+        SaveOtherPairedAI = [pother.AIdiscounted_points for pother in p.get_others_in_subsession() if
+                     pother.Role == target_role]
+
+        if p.Role == 'P1':
+            p.participant.T3_AI_P1_Discounted_points[p.round_number] = SaveOtherPairedAI
+        else:
+            p.participant.T3_AI_P2_Discounted_points[p.round_number] = SaveOtherPairedAI
+
+
+
+
 
 def custom_export(players):
     # header row
@@ -399,12 +415,6 @@ class AI_Bargaining(Page):
                 'AIdiscount_rate': player.AIdiscount_rate,
             }
         return response
-
-    @staticmethod
-    def js_vars(player):
-        return dict(
-            payoff=player.payoff,
-        )
 
 
 class Results(Page):

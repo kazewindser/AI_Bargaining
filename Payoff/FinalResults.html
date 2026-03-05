@@ -1,0 +1,119 @@
+
+{{ block content }}
+
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title text-center mb-4">最終結果</h4>
+
+        <div class="alert alert-info">
+            <strong>謝金対象ラウンド：</strong>第{{selectedRound}}ラウンド<br>
+            <strong>あなたの役割：</strong>{{selectedROLE}}
+        </div>
+
+        {{ if T3_whether_getAI_OFFER == False}}
+            <div class="alert alert-success">
+                <p><strong>獲得ポイント：</strong>{{final_point_payoff}}ポイント</p>
+                {{ if Treatment == 3 }}
+                <p class="mb-0"><small>獲得するポイントの計算方法がランダムに<strong>「自身が交渉後に得た割引後のポイント数に基づいて報酬を計算する」</strong>に選ばれました。</small></p>
+                {{endif}}
+            </div>
+        {{ else }}
+            <div class="alert alert-warning">
+                <p>獲得するポイントの計算方法がランダムに<strong>「自分と同じ役割のAIが獲得したポイントに基づいて報酬を計算する」</strong>に選ばれました。</p>
+                <p class="mb-0"><strong>獲得ポイント：</strong>{{final_point_payoff}}ポイント<br>
+                <small>（同じ役割のAIの中からランダムに選ばれました）</small></p>
+            </div>
+        {{ endif}}
+
+        <div class="alert alert-primary">
+            <p><strong>報酬計算：</strong>1ポイント = 40円</p>
+            <p><strong>最終追加報酬：</strong>{{AddPayoff}}円</p>
+            <p class="mb-0"><strong>最終報酬：</strong>{{participant.payoff_plus_participation_fee}}</p>
+        </div>
+    </div>
+</div>
+
+<br>
+
+<button type="button" class="btn btn-primary" onclick="toggleTable()">あなたのすべてのラウンドの結果を表示</button>
+<br><br>
+<table id="resultsTable" class="table table-bordered table-striped" style="display: none;">
+    <thead>
+        <tr>
+            <th>Round</th>
+            <th>役割</th>
+            <th>割引後のポイント</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for role, points in round_data %}
+        <tr {% if forloop.counter == selectedRound %}style="background-color: #ffeb3b;"{% endif %}>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ role }}</td>
+            <td>{{ points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{{ if Treatment == 3}}
+    {{if T3_whether_getAI_OFFER }}
+<br><br>
+<button type="button" class="btn btn-info" onclick="toggleAITable()">そのラウンドで、同じ役割のAIの結果を表示</button>
+<br><br>
+<table id="aiResultsTable" class="table table-bordered table-striped" style="display: none;">
+    <thead>
+        <tr>
+            <th>Round</th>
+            <th>役割</th>
+            <th>AIが獲得した割引後のポイント</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for points in sameAIpoints %}
+        <tr {% if forloop.counter0 == id_sameAIpoints %}style="background-color: #ffcdd2;"{% endif %}>
+            <td>{{ selectedRound }}</td>
+            <td>{{ selectedROLE }}</td>
+            <td>{{ points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+    {{ endif }}
+{{ endif }}
+
+
+<div class="alert alert-secondary text-center mt-4">
+    <h5>お疲れ様でした</h5>
+    <p class="mb-0">実験はここで終了いたしました。<br>実験者の指示をお待ちください。</p>
+</div>
+
+{{ endblock }}
+
+{{ block scripts }}
+<script>
+function toggleTable() {
+    var table = document.getElementById('resultsTable');
+    var button = event.target;
+    if (table.style.display === 'none') {
+        table.style.display = 'table';
+        button.textContent = 'あなたのすべてのラウンドの結果を非表示';
+    } else {
+        table.style.display = 'none';
+        button.textContent = 'あなたのすべてのラウンドの結果を表示';
+    }
+}
+
+function toggleAITable() {
+    var table = document.getElementById('aiResultsTable');
+    var button = event.target;
+    if (table.style.display === 'none') {
+        table.style.display = 'table';
+        button.textContent = 'そのラウンドで、同じ役割のAIの結果を非表示';
+    } else {
+        table.style.display = 'none';
+        button.textContent = 'そのラウンドで、同じ役割のAIの結果を表示';
+    }
+}
+</script>
+
+{{endblock}}

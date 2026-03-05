@@ -1,4 +1,8 @@
 from otree.api import *
+from wtforms.validators import length
+from settings import Treatment
+
+
 from settings import Treatment
 import math
 
@@ -33,23 +37,37 @@ def ceil_to_10(x: float) -> int:
     return int(math.ceil(x / 10) * 10)
 
 def set_payoffs(group):
+    # Assigns random round and treatment-specific payoffs to group players
     for p in group.get_players():
 
         p.selectedRound = random.randint(1,10)
         p.participant.SelectedRound = p.selectedRound
 
+        sameAIpoints = []
+
         if Treatment in (1, 2):
             p.final_point_payoff = p.participant.Discounted_points_Per_Round[p.selectedRound-1]
             p.payoff = ceil_to_10( p.final_point_payoff*40 )
+            p.participant.T3_whether_getAI_OFFER = p.T3_whether_getAI_OFFER
         else:
-            p.T3_whether_getAI_OFFER = random.randint(True, False)
+            p.T3_whether_getAI_OFFER = random.choice([True, False])
             p.participant.T3_whether_getAI_OFFER = p.T3_whether_getAI_OFFER
             if p.T3_whether_getAI_OFFER:
-                p.final_point_payoff = p.participant.Discounted_points_Per_Round[p.selectedRound-1]
+                if p.participant.ROLE[p.selectedRound-1] == 'P1':
+                    sameAIpoints = p.participant.T3_AI_P1_Discounted_points[p.selectedRound]
+                else:
+                    sameAIpoints = p.participant.T3_AI_P2_Discounted_points[p.selectedRound]
+
+                id_sameAIpoints = random.choice(range(len(sameAIpoints)))
+                p.participant.id_sameAIpoints = id_sameAIpoints
+                p.final_point_payoff = sameAIpoints[id_sameAIpoints]
                 p.payoff = ceil_to_10(p.final_point_payoff * 40)
             else:
+                id_sameAIpoints = -1
+                p.participant.id_sameAIpoints = id_sameAIpoints
                 p.final_point_payoff = p.participant.Discounted_points_Per_Round[p.selectedRound-1]
                 p.payoff = ceil_to_10(p.final_point_payoff * 40)
+        p.participant.Final_Point_Payoff = p.final_point_payoff
 
 def custom_export(players):
     # header row
@@ -62,14 +80,17 @@ def custom_export(players):
         ]
 
 
-
-
 # PAGES
 class Waitplease(WaitPage):
     after_all_players_arrive = set_payoffs
 
 class Break(Page):
-    pass
+    @staticmethod
+    def vars_for_template(player):
+
+        return dict(
+            Treatment = Treatment,
+        )
 
 
 class ResultsWaitPage(WaitPage):

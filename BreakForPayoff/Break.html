@@ -18,6 +18,18 @@ Final_Payoff: {{player.payoff}}
 
 FINAL: {{participant.payoff_plus_participation_fee}}
 
+{{ if Treatment == 1}}
+
+{{else}}
+  <br>
+  T3_whether_getAI_OFFER: {{participant.T3_whether_getAI_OFFER}}
+   'T3_AI_P1_Discounted_points': {{participant.T3_AI_P1_Discounted_points}}<br><br>
+  'T3_AI_P2_Discounted_points': {{participant.T3_AI_P2_Discounted_points}}<br><br>
+  <br>
+  id_sameAIpoints: {{participant.id_sameAIpoints}}
+
+{{endif}}
+
 
 
 <br>
