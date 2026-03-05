@@ -53,7 +53,20 @@
         💰 100ポイント中、{{if player.Role == 'P1'}}P2(AI){{else}}P1(AI){{endif}}に手渡すポイントを入力してください。
     </label>
     <div class="controls">
-        <input type="number" class="form-control" inputmode="numeric" id="id_offer_points" max="100" min="0" step="1" name="offer_points" value="" oninput="validateOffer(this)" style="font-size: 18px; padding: 10px; margin-bottom: 10px;">
+        <input
+            type="number"
+            class="form-control"
+            inputmode="numeric"
+            id="id_offer_points"
+            max="100"
+            min="0"
+            step="1"
+            name="offer_points"
+            value=""
+            oninput="validateOffer(this)"
+            onkeydown="return blockInvalidNumberKeys(event)"
+            style="font-size: 18px; padding: 10px; margin-bottom: 10px;"
+        >
         <button type="button" onclick="sendValue()" style="background-color: #28a745; color: white; padding: 10px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">提案を出す</button>
     </div>
 </div>
@@ -98,7 +111,7 @@
             <th style="padding: 8px; text-align: center;">割引後のポイント </th>
         </tr>
         <tr style="background-color: #e7f3ff;">
-            <td style="padding: 8px; text-align: center;"><b>あなた ({{ player.role }})</b></td>
+            <td style="padding: 8px; text-align: center;"><b>あなた ({{ player.Role }})</b></td>
             <td style="padding: 8px; text-align: center;"><span id="you-original">-</span></td>
             <td style="padding: 8px; text-align: center;"><span id="you-discount">-</span></td>
             <td style="padding: 8px; text-align: center;"><strong><span id="you-discounted">-</span></strong></td>
@@ -139,8 +152,95 @@
     let rejectMsg = document.getElementById('Reject');
     let previewDiv = document.getElementById('preview');
 
+  (function bindOfferTextToOfferFrom() {
+    const offerFromEl = document.getElementById('offerfrom');
+    const offerTextEl = document.getElementById('offertext');
+    const offerInfoEl = document.getElementById('offer_info');
+
+    if (!offerFromEl || !offerTextEl) return;
+
+    function isActuallyVisible(el) {
+      if (!el) return false;
+      const s = window.getComputedStyle(el);
+      return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0';
+    }
+
+    function sync() {
+      // “出现”的定义：有非空文本 AND 自己(或容器)可见
+      const hasText = (offerFromEl.textContent || '').trim().length > 0;
+
+      // offerfrom 本身一般不会被单独隐藏，你更多是隐藏 offer_info 容器
+      const containerVisible = offerInfoEl ? isActuallyVisible(offerInfoEl) : true;
+      const shouldShow = hasText && containerVisible;
+
+      offerTextEl.style.display = shouldShow ? 'inline' : 'none';
+    }
+
+    // 初次同步一次
+    sync();
+
+    // 监测：offerfrom 文本变化、offer_info / offerfrom 的 style/class 变化
+    const obs = new MutationObserver(() => sync());
+
+    obs.observe(offerFromEl, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+
+    if (offerInfoEl) {
+      obs.observe(offerInfoEl, {
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+      });
+    }
+
+    obs.observe(offerFromEl, {
+      attributes: true,
+      attributeFilter: ['style', 'class'],
+    });
+
+    // 额外兜底：有些改动不触发 mutation（极少），用一个轻量定时器纠偏
+    setInterval(sync, 300);
+  })();
+
+    function blockInvalidNumberKeys(e) {
+      // type="number" でも e/E や . が入るブラウザがあるのでブロック
+      const blocked = ['e', 'E', '.', '+', '-'];
+      if (blocked.includes(e.key)) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    }
+
+    function clampOfferInt(raw) {
+      // 1) remove non-digits (so: no decimals, no e, no letters)
+      // 2) parse as base-10 integer
+      // 3) clamp to [0, 100]
+      const digitsOnly = String(raw ?? '').replace(/[^\d]/g, '');
+      if (digitsOnly === '') return null;
+
+      let v = parseInt(digitsOnly, 10);
+      if (Number.isNaN(v)) return null;
+
+      if (v > 100) v = 100;
+      if (v < 0) v = 0;
+      return v;
+    }
+
     function validateOffer(input) {
-      let value = parseInt(input.value);
+      const clamped = clampOfferInt(input.value);
+
+      // 入力欄自体も「正しい整数」に矯正（例: 101→100、12.3→123ではなく 123 になるのが嫌なら下の正規表現を変えてね）
+      if (clamped === null) {
+        input.value = '';
+        previewDiv.style.display = 'none';
+        return;
+      }
+      input.value = String(clamped);
+
+      let value = clamped;
 
       // 如果输入有效，显示预览
       if (!isNaN(value) && value >= 0 && value <= 100) {
@@ -154,9 +254,6 @@
         // 对方的折扣率计算：如果你是P1(0.6规则)，对方是P2(0.4规则)；反之亦然
         let otherDiscountRate;
         if (playerRole === 'P1') {
-          // 你是P1(用0.6)，对方是P2(用0.4)
-          // 你的折扣率 = 1 * 0.6^n，对方 = 1 * 0.4^n
-          // 计算：0.6^n = currentDiscountRate，求 0.4^n
           if (currentDiscountRate === 1) {
             otherDiscountRate = 1;
           } else {
@@ -164,8 +261,6 @@
             otherDiscountRate = Math.pow(0.4, n);
           }
         } else {
-          // 你是P2(用0.4)，对方是P1(用0.6)
-          // 你的折扣率 = 1 * 0.4^n，对方 = 1 * 0.6^n
           if (currentDiscountRate === 1) {
             otherDiscountRate = 1;
           } else {
@@ -177,13 +272,11 @@
         // 计算各方的点数
         let youOriginal, otherOriginal;
         if (playerRole === 'P1') {
-          // P1提出给P2多少点
-          youOriginal = 100 - value;  // P1自己保留的点数
-          otherOriginal = value;       // P2获得的点数
+          youOriginal = 100 - value;
+          otherOriginal = value;
         } else {
-          // P2提出给P1多少点
-          youOriginal = 100 - value;  // P2自己保留的点数
-          otherOriginal = value;       // P1获得的点数
+          youOriginal = 100 - value;
+          otherOriginal = value;
         }
 
         // 计算折扣后的点数
@@ -201,7 +294,6 @@
         // 显示预览区域
         previewDiv.style.display = 'block';
       } else {
-        // 输入无效，隐藏预览
         previewDiv.style.display = 'none';
       }
     }
@@ -238,23 +330,29 @@
     }
 
     function sendValue() {
-    let value = parseInt(offer_points.value);
-    // 验证输入是否合法（0-100的整数）
-    if (isNaN(value) || value < 0 || value > 100) {
-      alert('0から100の整数を入力してください。');
-      return;
-    }
-    console.log('sendValue called, offer_points.value:', value);
-    liveSend({
-      type: 'offer',
-      value: value
-    });
-    sentOfferInCurrentStage = true; // 标记已发送offer
-    offer_field.style.display = 'none';
-    previewDiv.style.display = 'none'; // 隐藏offer预览
-    rejectMsg.parentElement.style.display = 'none'; // 隐藏Reject消息
+      const clamped = clampOfferInt(offer_points.value);
+      if (clamped === null) {
+        alert('0から100の整数を入力してください。');
+        return;
+      }
+      offer_points.value = String(clamped);
 
-  }
+      let value = clamped;
+      if (isNaN(value) || value < 0 || value > 100) {
+        alert('0から100の整数を入力してください。');
+        return;
+      }
+
+      console.log('sendValue called, offer_points.value:', value);
+      liveSend({
+        type: 'offer',
+        value: value
+      });
+      sentOfferInCurrentStage = true; // 标记已发送offer
+      offer_field.style.display = 'none';
+      previewDiv.style.display = 'none'; // 隐藏offer预览
+      rejectMsg.parentElement.style.display = 'none'; // 隐藏Reject消息
+    }
 
   function sendAccept_Reject() {
     let selectedRadio = document.querySelector('input[name="accepted_offer"]:checked');
@@ -272,6 +370,7 @@
     offertext.style.display = 'none';
     offerfrom.innerHTML = '';
     receivedOfferInCurrentStage = false;
+    Reject.parentElement.style.display = 'none';
   }
 
   function liveRecv(data) {
@@ -321,6 +420,81 @@
         document.getElementById('offer_info').style.display = 'none';
       }
     }
+
+    if (data['game_finished'] !== undefined) {
+        if (data['game_finished'] === true) {
+                 // 延迟1秒后跳转，让用户看到结果
+                 setTimeout(function() {
+                     document.getElementById("form").submit();
+                 }, 1000);
+        }
+    }
+}
+
+    function resetDecisionUI() {
+      // 1) 清空 radio 选择
+      document.querySelectorAll('input[name="accepted_offer"]').forEach(radio => {
+        radio.checked = false;
+      });
+
+      // 2) 隐藏两个预览块（你提到的 + 另一个）
+      const decisionPreview = document.getElementById('decision-preview');
+      const decisionMessage = document.getElementById('decision-message');
+      if (decisionPreview) decisionPreview.style.display = 'none';
+      if (decisionMessage) decisionMessage.textContent = '';
+
+      const arPreview = document.getElementById('accept_reject_preview');
+      const arText = document.getElementById('accept_preview_text');
+      if (arPreview) arPreview.style.display = 'none';
+      if (arText) arText.innerHTML = '';
+    }
+
+    function liveRecv(data) {
+      console.log('received a message!', data);
+
+      if (data['AIaccept'] !== undefined) {
+        console.log('对方的回应:', data['AIaccept']);
+        if (data['AIaccept'] === false) {
+          rejectMsg.parentElement.style.display = 'block';
+
+          let currentStage = parseInt(CurrentStage.textContent);
+          if (currentStage < 3 && data['AIOffer'] !== undefined) {
+            offerfrom.innerHTML = data['AIOffer'];
+            document.getElementById('offer_info').style.display = 'block';
+
+            // ✅ 每次要让用户重新做 accept/reject 之前，强制重置 UI
+            resetDecisionUI();
+
+            accept_field.style.display = 'block';
+          }
+
+          if (data['CurrentStage'] !== undefined) {
+            CurrentStage.innerHTML = data['CurrentStage'];
+          }
+          if (data['Current_discount_rate'] !== undefined) {
+            discount_rate.innerHTML = parseFloat(data['Current_discount_rate']).toFixed(2);
+          }
+        } else if (data['AIaccept'] === true) {
+          Accept.parentElement.style.display = 'block';
+          rejectMsg.parentElement.style.display = 'none';
+        }
+      }
+
+      // P2拒绝后收到后端确认，显示offer_field让P2发出counter-offer
+      if (data['CurrentStage'] !== undefined && data['AIaccept'] === undefined) {
+        CurrentStage.innerHTML = data['CurrentStage'];
+        if (data['Current_discount_rate'] !== undefined) {
+          discount_rate.innerHTML = parseFloat(data['Current_discount_rate']).toFixed(2);
+        }
+        if (!data['game_finished']) {
+          offer_points.value = '';
+          offer_field.style.display = 'block';
+          document.getElementById('offer_info').style.display = 'none';
+
+          // ✅ 切到出价阶段，也把决策预览全部清掉（防残留）
+          resetDecisionUI();
+        }
+      }
 
     if (data['game_finished'] !== undefined) {
         if (data['game_finished'] === true) {

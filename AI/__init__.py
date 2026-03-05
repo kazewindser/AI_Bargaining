@@ -4,7 +4,6 @@ import random
 
 #### AI setting #################
 from openai import OpenAI
-from otree.models import player
 from pydantic import BaseModel, Field
 import os
 
@@ -47,6 +46,7 @@ def ElicitAIResp_P1_stage1_initial():
     )
     response_content = response.output_parsed
     prediction_dict = response_content.model_dump()
+    print(prediction_dict)
     return int(prediction_dict["Offer_to_P2_stage1"])
 
 def ElicitAIResp_P2_stage1_stage2(player):
@@ -76,6 +76,7 @@ def ElicitAIResp_P2_stage1_stage2(player):
     )
     response_content = response.output_parsed
     prediction_dict = response_content.model_dump()
+    print(prediction_dict)
     return prediction_dict
 
 def ElicitAIResp_P2_stage3_end(player):
@@ -97,7 +98,6 @@ def ElicitAIResp_P2_stage3_end(player):
     -Decision required:
     Decide whether to accept the offer: Whether_to_accept_P1_offer_stage3: <TRUE/FALSE>
     """
-    print(user_prompt_P2_stage3_end)
     response = client.responses.parse(
         model=MODEL,
         input=[
@@ -111,6 +111,7 @@ def ElicitAIResp_P2_stage3_end(player):
     )
     response_content = response.output_parsed
     prediction_dict = response_content.model_dump()
+    print(prediction_dict)
     return prediction_dict
 
 def ElicitAIResp_P1_stage2_stage3(player):
@@ -132,7 +133,6 @@ def ElicitAIResp_P1_stage2_stage3(player):
     2. If you REJECT, propose an offer (0–100) to P2 for Stage 3: Offer_to_P2_if_rejected_proceed_to_stage3: <integer or -1 if accepted>
     """
 
-    print(user_prompt_P1_stage2_stage3)
     response = client.responses.parse(
         model=MODEL,
         input=[
@@ -146,6 +146,7 @@ def ElicitAIResp_P1_stage2_stage3(player):
     )
     response_content = response.output_parsed
     prediction_dict = response_content.model_dump()
+    print(prediction_dict)
     return prediction_dict
 
 
@@ -181,6 +182,15 @@ def creating_session(subsession):
             p.participant.Discounted_points_Per_Round = []
             p.participant.PairedLabel = []
 
+    players = subsession.get_players()
+    random.shuffle(players)
+
+    half = len(players) // 2
+    for i, p in enumerate(players):
+        p.Role = 'P1' if i < half else 'P2'
+    if len(players) % 2:
+        players[-1].Role = random.choice(['P1', 'P2'])
+
 class Group(BaseGroup):
     pass
 
@@ -212,6 +222,7 @@ class Player(BasePlayer):
     HumanP1toAIP2stage3 = models.IntegerField(initial=-2,max=100)
 
     game_finished = models.BooleanField(initial=False)
+    accepted_at_stage = models.IntegerField(initial=0,min=0,max=4)
 
 
 class BargainingLog(ExtraModel):
@@ -229,6 +240,25 @@ def SaveQ(subsession):
         p.participant.ROLE.append(p.Role)
         p.participant.Discounted_points_Per_Round.append(p.Discounted_points)
 
+def custom_export(players):
+    # header row
+    yield ['session', 'participant_code', 'label',
+           'Role','CurrentStage','Accepted_at_stage',
+           'AIP1toHumanP2stage1','HumanP2toAIP1stage2','AIP1toHumanP2stage3',
+           'HumanP1toAIP2stage1','AIP2toHumanP1stage2','HumanP1toAIP2stage3',
+           'FinalDiscounted_points','FinalAIdiscounted_points'
+           ]
+    for p in players:
+        participant = p.participant
+        session = p.session
+        yield [
+        session.code, participant.code, participant.label,
+        p.Role, p.CurrentStage, p.accepted_at_stage,
+        p.AIP1toHumanP2stage1, p.HumanP2toAIP1stage2, p.AIP1toHumanP2stage3,
+        p.HumanP1toAIP2stage1, p.AIP2toHumanP1stage2, p.HumanP1toAIP2stage3,
+        p.Discounted_points, p.AIdiscounted_points
+        ]
+
 
 
 # PAGES
@@ -236,9 +266,6 @@ class Title(Page):
     timeout_seconds = 10
     @staticmethod
     def is_displayed(player):
-        player.Role = random.choice(['P1', 'P2'])
-        #player.Role = 'P1'
-        #player.Role = 'P2'
         return player.round_number == 1
 
 class AI_Bargaining(Page):
@@ -276,11 +303,13 @@ class AI_Bargaining(Page):
                         player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
                         player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
                         player.game_finished = True
+                        player.accepted_at_stage = player.CurrentStage
                     else:
                         player.potential_point = OfferifRejected
                         player.AIP2toHumanP1stage2 = OfferifRejected
                         player.CurrentStage += 1
                         player.discount_rate *= 0.6
+                        player.AIdiscount_rate *= 0.4
                         print('Offer_to_P1_if_rejected_proceed_to_stage2:', OfferifRejected)
 
                     response[player.id_in_group] = {
@@ -298,11 +327,14 @@ class AI_Bargaining(Page):
                     if Accepted:
                         player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
                         player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
+                        player.accepted_at_stage = player.CurrentStage
                     else:
                         player.Discounted_points = 0
                         player.AIdiscounted_points = 0
+                        player.accepted_at_stage = player.CurrentStage+1
                         #不管怎么说都结束了
                     player.game_finished = True
+
 
                     response[player.id_in_group] = {
                         'game_finished': player.game_finished,
@@ -316,25 +348,27 @@ class AI_Bargaining(Page):
                     AIP1stage2Resp = ElicitAIResp_P1_stage2_stage3(player)
                     Accepted = AIP1stage2Resp['Whether_to_accept_P2_offer_stage2']
                     OfferifRejected = AIP1stage2Resp['Offer_to_P2_if_rejected_proceed_to_stage3']
+                    player.AIP1toHumanP2stage3 = OfferifRejected
+                    print('Offer_to_P2_if_rejected_proceed_to_stage3:', OfferifRejected)
+                    print('Accepted:', Accepted)
                     if Accepted:
                         player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
                         player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
                         player.game_finished = True
+                        player.accepted_at_stage = player.CurrentStage
                     else:
                         player.potential_point = OfferifRejected
                         player.CurrentStage += 1
                         player.discount_rate *= 0.4
+                        player.AIdiscount_rate *= 0.6
 
-                response[player.id_in_group] = {
-                    'game_finished': player.game_finished,
-                    'AIaccept': Accepted,
-                    'AIOffer': OfferifRejected,
-                    'Current_discount_rate': player.discount_rate,
-                    'CurrentStage': player.CurrentStage,
-                }
-
-
-
+                    response[player.id_in_group] = {
+                        'game_finished': player.game_finished,
+                        'AIaccept': Accepted,
+                        'AIOffer': OfferifRejected,
+                        'Current_discount_rate': player.discount_rate,
+                        'CurrentStage': player.CurrentStage,
+                    }
 
         elif data['type'] == 'acceptance':
             # Convert string 'True'/'False' to boolean if needed
@@ -343,12 +377,14 @@ class AI_Bargaining(Page):
                 accepted_value = data['value'] == 'True'
                 if accepted_value:
                     player.game_finished = True
+                    player.accepted_at_stage = player.CurrentStage
                     player.Discounted_points = round(player.potential_point * player.discount_rate, 2)
                     player.AIdiscounted_points = round((100-player.potential_point) * player.AIdiscount_rate, 2)
                 else:
                     player.CurrentStage += 1
                     if player.CurrentStage >= 4:
                         player.game_finished = True
+                        player.accepted_at_stage = player.CurrentStage
                         player.Discounted_points = 0
                         player.AIdiscounted_points = 0
                     else:

@@ -1,0 +1,27 @@
+{% block title %}
+{% endblock %}
+
+{% block content %}
+  <h2 style="text-align:center;"><strong>全10ラウンドのゲームが終了しました。引き続き、アンケートへのご回答をお願いいたします。</strong></h2>
+  <br><br><br>
+
+
+Payofflog: {{player.participant.Discounted_points_Per_Round}}
+<br>
+Role: {{player.participant.ROLE}}
+
+SELECTED_ROUND:{{player.participant.SelectedRound}}
+<br>
+FINAL_POINT_Payoff: {{player.final_point_payoff}}
+<br>
+Final_Payoff: {{player.payoff}}
+
+FINAL: {{participant.payoff_plus_participation_fee}}
+
+
+
+<br>
+  <div style="text-align:center;">
+    {{ next_button }}
+  </div>
+{% endblock %}
