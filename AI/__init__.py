@@ -258,7 +258,7 @@ def SaveQ(subsession):
 
 def custom_export(players):
     # header row
-    yield ['session', 'participant_code', 'label',
+    yield ['session', 'participant_code', 'label', 'Round',
            'Role','CurrentStage','Accepted_at_stage',
            'AIP1toHumanP2stage1','HumanP2toAIP1stage2','AIP1toHumanP2stage3',
            'HumanP1toAIP2stage1','AIP2toHumanP1stage2','HumanP1toAIP2stage3',
@@ -268,7 +268,7 @@ def custom_export(players):
         participant = p.participant
         session = p.session
         yield [
-        session.code, participant.code, participant.label,
+        session.code, participant.code, participant.label,p.round_number,
         p.Role, p.CurrentStage, p.accepted_at_stage,
         p.AIP1toHumanP2stage1, p.HumanP2toAIP1stage2, p.AIP1toHumanP2stage3,
         p.HumanP1toAIP2stage1, p.AIP2toHumanP1stage2, p.HumanP1toAIP2stage3,
