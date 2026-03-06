@@ -33,12 +33,15 @@ class Player(BasePlayer):
     T3_whether_getAI_OFFER = models.BooleanField(initial=False)
     final_point_payoff = models.FloatField()
 
+
 def ceil_to_10(x: float) -> int:
     return int(math.ceil(x / 10) * 10)
 
 def set_payoffs(group):
     # Assigns random round and treatment-specific payoffs to group players
     for p in group.get_players():
+        id_sameAIpoints = -2
+        p.participant.id_sameAIpoints = id_sameAIpoints
 
         p.selectedRound = random.randint(1,10)
         p.participant.SelectedRound = p.selectedRound
