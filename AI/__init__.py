@@ -11,7 +11,7 @@ from .Prompts import SYSTEM_PROMPT,user_prompt_P1_stage1_initial
 client = OpenAI(api_key=os.environ.get('AI_Bargaining_KEY'))
 
 
-MODEL = "gpt-5.2"
+MODEL = "gpt-5.4"
 TEMP = 1
 
 class P1_stage1_initial(BaseModel):
