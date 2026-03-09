@@ -24,15 +24,15 @@ class Player(BasePlayer):
     # 人間意思決定预测
     p1_stage1_offer = models.IntegerField(
         min=0, max=100,
-        label='本日の参加者がP1として行動する時、ステージ1で相手に提示するポイント数の平均値を予測してください'
+        label='本日の参加者がP1として行動する時、ステージ1で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
     p2_stage2_offer = models.IntegerField(
         min=0, max=100,
-        label='本日の参加者がP2として行動する時、ステージ2で相手に提示するポイント数の平均値を予測してください'
+        label='本日の参加者がP2として行動する時、ステージ2で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
     p1_stage3_offer = models.IntegerField(
         min=0, max=100,
-        label='本日の参加者がP1として行動する時、ステージ3で相手に提示するポイント数の平均値を予測してください'
+        label='本日の参加者がP1として行動する時、ステージ3で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
 
     AveStage = models.FloatField(
@@ -43,7 +43,7 @@ class Player(BasePlayer):
     # 基本偏好
     acceptable_minimum = models.IntegerField(
         min=0, max=100,
-        label='あなたが受け入れ可能な最小のポイント数はいくつですか？'
+        label='あなたが受け入れ可能な最小のポイント数はいくつですか？（0〜100の整数で入力）'
     )
 
     svo_question = models.IntegerField(
@@ -60,17 +60,17 @@ class Player(BasePlayer):
     AI_stage1_offer = models.IntegerField(
         min=0, max=100,
         blank=True,  # T1では入力不要
-        label='AIがP1として行動する時、ステージ1で相手に提示するポイント数の平均値を予測してください'
+        label='AIがP1として行動する時、ステージ1で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
     AI_stage2_offer = models.IntegerField(
         min=0, max=100,
         blank=True,
-        label='AIがP2として行動する時、ステージ2で相手に提示するポイント数の平均値を予測してください'
+        label='AIがP2として行動する時、ステージ2で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
     AI_stage3_offer = models.IntegerField(
         min=0, max=100,
         blank=True,
-        label='AIがP1として行動する時、ステージ3で相手に提示するポイント数の平均値を予測してください'
+        label='AIがP1として行動する時、ステージ3で相手に提示するポイント数の平均値を予測してください（0〜100の整数で入力）'
     )
 
     AI_competitiveness = models.IntegerField(
