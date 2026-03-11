@@ -27,7 +27,7 @@ SESSION_CONFIGS = [
     ),
 ]
 
-Treatment = 3  # 1: Human, 2: AI_NObeneficial 3: AI_Beneficial
+Treatment = 1  # 1: Human, 2: AI_NObeneficial 3: AI_Beneficial
 
 # if you set a property in SESSION_CONFIG_DEFAULTS, it will be inherited by all configs
 # in SESSION_CONFIGS, except those that explicitly override it.

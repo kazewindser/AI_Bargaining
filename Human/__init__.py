@@ -100,6 +100,10 @@ class Title(Page):
     def is_displayed(player):
         return player.round_number == 1
 
+class WaitForBargaining(WaitPage):
+    title_text = "全員の準備を待っています"
+    body_text = "しばらくお待ちください..."
+
 class Bargaining(Page):
     form_model = 'player'
     form_fields = ['offer_points','accepted_offer']
@@ -179,6 +183,6 @@ class WaitForNext(WaitPage):
         SaveQ(subsession)
         subsession.group_randomly()
 
-page_sequence = [Title,Bargaining,Results,WaitForNext]
+page_sequence = [Title,WaitForBargaining,Bargaining,Results,WaitForNext]
 
 
